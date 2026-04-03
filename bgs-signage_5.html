@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blue Granite Storage – Welcome</title>
+<link href="https://fonts.googleapis.com/css2?family=Museo+Slab:wght@300;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue: #2b5272;
+    --blue-dark: #1e3a52;
+    --blue-light: #3a6a94;
+    --gold: #aa6d32;
+    --gold-light: #c98a4a;
+    --gray: #c9cad4;
+    --stone: #c5b2a2;
+    --dark: #1a1f2a;
+    --darker: #12161f;
+    --text-light: #e8eaf0;
+    --text-muted: #8a9ab0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--darker);
+    color: var(--text-light);
+    font-family: 'Museo Slab', Georgia, serif;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1fr 1.6fr;
+    grid-template-rows: 1fr;
+  }
+
+  /* ── LEFT PANEL ── */
+  .left {
+    background: var(--blue-dark);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 3vh 3vw;
+    border-right: 3px solid var(--gold);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .left::before {
+    content: '';
+    position: absolute;
+    bottom: -80px;
+    left: -80px;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    background: rgba(170,109,50,0.08);
+    pointer-events: none;
+  }
+
+  .logo-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5vh;
+    margin-top: 1vh;
+  }
+
+  .logo-wrap img {
+    width: min(180px, 18vw);
+    opacity: 0.95;
+  }
+
+  .brand-name {
+    text-align: center;
+    line-height: 1.1;
+  }
+
+  .brand-name .blue {
+    font-size: clamp(1.6rem, 3vw, 2.6rem);
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.02em;
+    display: block;
+  }
+
+  .brand-name .granite {
+    font-size: clamp(1.6rem, 3vw, 2.6rem);
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 0.02em;
+    display: block;
+  }
+
+  .brand-name .storage {
+    font-size: clamp(0.75rem, 1.3vw, 1.1rem);
+    font-weight: 300;
+    letter-spacing: 0.25em;
+    color: var(--gray);
+    text-transform: uppercase;
+    display: block;
+    margin-top: 0.3em;
+  }
+
+  .welcome-block {
+    text-align: center;
+    padding: 2vh 1vw;
+    border-top: 1px solid rgba(201,202,212,0.2);
+    border-bottom: 1px solid rgba(201,202,212,0.2);
+    width: 100%;
+  }
+
+  .welcome-block .hello {
+    font-size: clamp(0.7rem, 1.1vw, 0.95rem);
+    font-weight: 300;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.6em;
+  }
+
+  .welcome-block .message {
+    font-size: clamp(1rem, 1.8vw, 1.5rem);
+    font-weight: 300;
+    color: var(--text-light);
+    line-height: 1.4;
+  }
+
+  .clock-block {
+    text-align: center;
+  }
+
+  .clock-time {
+    font-size: clamp(2.5rem, 5vw, 4.5rem);
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.04em;
+    line-height: 1;
+  }
+
+  .clock-date {
+    font-size: clamp(0.75rem, 1.2vw, 1rem);
+    font-weight: 300;
+    color: var(--text-muted);
+    margin-top: 0.4em;
+    letter-spacing: 0.05em;
+  }
+
+  .hours-block {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 1.5vh 1.5vw;
+    text-align: center;
+  }
+
+  .hours-label {
+    font-size: clamp(0.6rem, 0.9vw, 0.8rem);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 300;
+    margin-bottom: 0.5em;
+  }
+
+  .hours-val {
+    font-size: clamp(0.85rem, 1.4vw, 1.1rem);
+    font-weight: 700;
+    color: #fff;
+  }
+
+  /* ── RIGHT PANEL ── */
+  .right {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    background: var(--dark);
+    overflow: hidden;
+  }
+
+  /* WEATHER */
+  .weather-section {
+    background: var(--blue);
+    padding: 2.5vh 3vw 2vh;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid var(--gold);
+    flex-shrink: 0;
+  }
+
+  .weather-main {
+    display: flex;
+    align-items: center;
+    gap: 1.5vw;
+  }
+
+  .weather-icon {
+    font-size: clamp(2.5rem, 4vw, 3.5rem);
+    line-height: 1;
+  }
+
+  .weather-temp {
+    font-size: clamp(2.5rem, 4.5vw, 4rem);
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+  }
+
+  .weather-desc {
+    font-size: clamp(0.75rem, 1.2vw, 1rem);
+    font-weight: 300;
+    color: var(--gray);
+    margin-top: 0.2em;
+    text-transform: capitalize;
+  }
+
+  .weather-location {
+    font-size: clamp(0.7rem, 1vw, 0.9rem);
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 300;
+  }
+
+  .weather-details {
+    display: flex;
+    gap: 2vw;
+    font-size: clamp(0.7rem, 1.1vw, 0.95rem);
+    color: var(--gray);
+    font-weight: 300;
+  }
+
+  .weather-detail-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2em;
+  }
+
+  .weather-detail-label {
+    font-size: clamp(0.55rem, 0.8vw, 0.7rem);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  /* PROMO */
+  .promo-section {
+    background: linear-gradient(135deg, #1e2d3d 0%, #1a1f2a 100%);
+    padding: 2vh 3vw;
+    border-bottom: 1px solid rgba(170,109,50,0.3);
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .promo-section::after {
+    content: '';
+    position: absolute;
+    right: -20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(170,109,50,0.07);
+    pointer-events: none;
+  }
+
+  .promo-badge {
+    display: inline-block;
+    background: var(--gold);
+    color: #fff;
+    font-size: clamp(0.55rem, 0.8vw, 0.7rem);
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 0.3em 0.9em;
+    border-radius: 20px;
+    margin-bottom: 0.8em;
+  }
+
+  .promo-headline {
+    font-size: clamp(1.1rem, 2.2vw, 1.9rem);
+    font-weight: 700;
+    color: var(--gold);
+    line-height: 1.2;
+    margin-bottom: 0.3em;
+  }
+
+  .promo-detail {
+    font-size: clamp(0.75rem, 1.2vw, 1rem);
+    font-weight: 300;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* ABOUT / REVIEWS */
+  .bottom-section {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow: hidden;
+  }
+
+  .about-section {
+    padding: 2.5vh 2.5vw;
+    border-right: 1px solid rgba(201,202,212,0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 1.5vh;
+  }
+
+  .section-label {
+    font-size: clamp(0.55rem, 0.8vw, 0.7rem);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 300;
+    margin-bottom: 1em;
+  }
+
+  .about-points {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2vh;
+  }
+
+  .about-point {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.8vw;
+    font-size: clamp(0.75rem, 1.2vw, 1rem);
+    font-weight: 300;
+    color: var(--text-light);
+    line-height: 1.4;
+  }
+
+  .point-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--gold);
+    flex-shrink: 0;
+    margin-top: 0.45em;
+  }
+
+  /* REVIEWS */
+  .reviews-section {
+    padding: 2.5vh 2.5vw;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 1.5vh;
+    overflow: hidden;
+  }
+
+  .reviews-carousel {
+    position: relative;
+    overflow: hidden;
+    flex: 1;
+  }
+
+  .review-slide {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+    padding-top: 0.5em;
+  }
+
+  .review-slide.active {
+    opacity: 1;
+    position: relative;
+  }
+
+  .stars {
+    color: var(--gold);
+    font-size: clamp(0.85rem, 1.3vw, 1.1rem);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.6em;
+  }
+
+  .review-text {
+    font-size: clamp(0.75rem, 1.15vw, 0.95rem);
+    font-weight: 300;
+    color: var(--text-light);
+    line-height: 1.6;
+    font-style: italic;
+    margin-bottom: 0.8em;
+  }
+
+  .review-author {
+    font-size: clamp(0.65rem, 0.9vw, 0.8rem);
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .review-dots {
+    display: flex;
+    gap: 6px;
+    margin-top: 1.5vh;
+  }
+
+  .review-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(201,202,212,0.25);
+    transition: background 0.3s;
+  }
+
+  .review-dot.active {
+    background: var(--gold);
+  }
+
+  /* Gold divider accent */
+  .gold-line {
+    width: 40px;
+    height: 2px;
+    background: var(--gold);
+    margin-bottom: 1em;
+  }
+</style>
+</head>
+<body>
+
+<!-- LEFT PANEL -->
+<div class="left">
+  <div class="logo-wrap">
+    <img src="/home/bluegranitestorage/logo.png"
+         onerror="this.style.display='none'"
+         alt="Blue Granite Storage">
+    <div class="brand-name">
+      <span class="blue">Blue Granite</span>
+      <span class="granite">Storage</span>
+      <span class="storage">Tarboro, NC</span>
+    </div>
+  </div>
+
+  <div class="welcome-block">
+    <div class="hello">Welcome</div>
+    <div class="message" id="welcome-msg">We're glad you're here.<br>Let us know how we can help.</div>
+  </div>
+
+  <div class="clock-block">
+    <div class="clock-time" id="clock">--:--</div>
+    <div class="clock-date" id="clock-date">--</div>
+  </div>
+
+  <div class="hours-block">
+    <div class="hours-label">Gate Hours</div>
+    <div class="hours-val" id="gate-hours">4:30 AM – 10:30 PM</div>
+  </div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="right">
+
+  <!-- WEATHER -->
+  <div class="weather-section">
+    <div class="weather-main">
+      <div class="weather-icon" id="w-icon">⛅</div>
+      <div>
+        <div class="weather-temp" id="w-temp">--°F</div>
+        <div class="weather-desc" id="w-desc">Loading weather...</div>
+        <div class="weather-location">Tarboro, NC</div>
+      </div>
+    </div>
+    <div class="weather-details">
+      <div class="weather-detail-item">
+        <div class="weather-detail-label">Humidity</div>
+        <div id="w-humidity">--%</div>
+      </div>
+      <div class="weather-detail-item">
+        <div class="weather-detail-label">Wind</div>
+        <div id="w-wind">-- mph</div>
+      </div>
+      <div class="weather-detail-item">
+        <div class="weather-detail-label">Feels Like</div>
+        <div id="w-feels">--°F</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROMO -->
+  <div class="promo-section">
+    <div class="promo-badge" id="promo-badge">Grand Opening Special</div>
+    <div class="promo-headline" id="promo-headline">Reserve Any Unit Today –<br>First Month FREE!</div>
+    <div class="promo-detail" id="promo-detail">New tenants only. Ask our team for details or visit bluegranitestorage.com to reserve online.</div>
+  </div>
+
+  <!-- ABOUT + REVIEWS -->
+  <div class="bottom-section">
+
+    <div class="about-section">
+      <div class="section-label">Why Blue Granite Storage</div>
+      <div class="gold-line"></div>
+      <div class="about-points" id="about-points">
+        <div class="about-point"><div class="point-dot"></div><span>Brand new, state-of-the-art facility built for your convenience</span></div>
+        <div class="about-point"><div class="point-dot"></div><span>Climate-controlled units available for sensitive belongings</span></div>
+        <div class="about-point"><div class="point-dot"></div><span>Advanced security with 24/7 camera monitoring</span></div>
+        <div class="about-point"><div class="point-dot"></div><span>Extended gate access — 4:30 AM to 10:30 PM daily</span></div>
+        <div class="about-point"><div class="point-dot"></div><span>Easy online reservations & payments at bluegranitestorage.com</span></div>
+      </div>
+    </div>
+
+    <div class="reviews-section">
+      <div class="section-label">What Our Customers Say</div>
+      <div class="gold-line"></div>
+      <div class="reviews-carousel" id="reviews-carousel">
+        <!-- Reviews injected by JS -->
+      </div>
+      <div class="review-dots" id="review-dots"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SETTINGS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRL4ZvSM-rBD3-a7uEAJQi1r-lvbeFUvWm0gtmPDWE6P66DtIsPJyd0tuEOlNBrmQ/pub?gid=966423653&single=true&output=csv';
+const REVIEWS_CSV  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRL4ZvSM-rBD3-a7uEAJQi1r-lvbeFUvWm0gtmPDWE6P66DtIsPJyd0tuEOlNBrmQ/pub?gid=1988993265&single=true&output=csv';
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  return lines.map(line => {
+    const cols = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+      else { cur += ch; }
+    }
+    cols.push(cur.trim());
+    return cols;
+  });
+}
+
+let reviews = [];
+let currentReview = 0;
+let reviewTimer = null;
+
+async function fetchSettings() {
+  try {
+    const res = await fetch(SETTINGS_CSV + '&t=' + Date.now());
+    const text = await res.text();
+    const rows = parseCSV(text);
+    const map = {};
+    rows.forEach(r => { if (r[0] && r[1] && !r[0].toLowerCase().includes('field') && !r[0].toLowerCase().includes('blue granite')) map[r[0].trim()] = r[1].trim(); });
+
+    if (map.welcome_message) {
+      document.getElementById('welcome-msg').innerHTML = map.welcome_message.replace(/\\n/g, '<br>');
+    }
+    if (map.gate_hours) {
+      document.getElementById('gate-hours').textContent = map.gate_hours;
+    }
+    if (map.promo_badge) {
+      document.getElementById('promo-badge').textContent = map.promo_badge;
+    }
+    if (map.promo_headline) {
+      document.getElementById('promo-headline').innerHTML = map.promo_headline.replace(/\\n/g, '<br>');
+    }
+    if (map.promo_detail) {
+      document.getElementById('promo-detail').textContent = map.promo_detail;
+    }
+  } catch(e) {
+    console.log('Settings fetch failed:', e);
+  }
+}
+
+async function fetchReviews() {
+  try {
+    const res = await fetch(REVIEWS_CSV + '&t=' + Date.now());
+    const text = await res.text();
+    const rows = parseCSV(text);
+    // Skip title rows — find the actual header row by looking for 'active'
+    const headerRowIdx = rows.findIndex(r => r.some(c => c.toLowerCase().trim().startsWith('active')));
+    if (headerRowIdx === -1) return;
+    const headers = rows[headerRowIdx].map(h => h.toLowerCase().trim());
+    const activeIdx = 0;
+    const nameIdx   = 1;
+    const textIdx   = 2;
+    const ratingIdx = 3;
+
+    reviews = rows.slice(headerRowIdx + 1)
+      .filter(r => r[activeIdx] && r[activeIdx].toUpperCase() === 'YES')
+      .map(r => ({
+        author: r[nameIdx] || 'Google Review',
+        text:   r[textIdx] || '',
+        rating: parseInt(r[ratingIdx]) || 5
+      }))
+      .filter(r => r.text.length > 0);
+
+    if (reviews.length > 0) buildReviews();
+  } catch(e) {
+    console.log('Reviews fetch failed:', e);
+  }
+}
+
+function buildReviews() {
+  const carousel = document.getElementById('reviews-carousel');
+  const dots = document.getElementById('review-dots');
+  carousel.innerHTML = '';
+  dots.innerHTML = '';
+  currentReview = 0;
+  reviews.forEach((r, i) => {
+    const stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+    const slide = document.createElement('div');
+    slide.className = 'review-slide' + (i === 0 ? ' active' : '');
+    slide.innerHTML = `<div class="stars">${stars}</div><div class="review-text">"${r.text}"</div><div class="review-author">— ${r.author}</div>`;
+    carousel.appendChild(slide);
+    const dot = document.createElement('div');
+    dot.className = 'review-dot' + (i === 0 ? ' active' : '');
+    dots.appendChild(dot);
+  });
+  if (reviewTimer) clearInterval(reviewTimer);
+  if (reviews.length > 1) reviewTimer = setInterval(rotateReview, 7000);
+}
+
+function rotateReview() {
+  const slides = document.querySelectorAll('.review-slide');
+  const dots = document.querySelectorAll('.review-dot');
+  if (!slides.length) return;
+  slides[currentReview].classList.remove('active');
+  dots[currentReview].classList.remove('active');
+  currentReview = (currentReview + 1) % reviews.length;
+  slides[currentReview].classList.add('active');
+  dots[currentReview].classList.add('active');
+}
+
+function updateClock() {
+  const now = new Date();
+  let h = now.getHours(), m = now.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  document.getElementById('clock').textContent = `${h}:${String(m).padStart(2,'0')} ${ampm}`;
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('clock-date').textContent = `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+}
+
+function getWeatherIcon(code, isDay) {
+  if (code === 0) return isDay ? '☀️' : '🌙';
+  if (code <= 2) return isDay ? '⛅' : '🌤';
+  if (code === 3) return '☁️';
+  if (code <= 49) return '🌫';
+  if (code <= 57) return '🌦';
+  if (code <= 67) return '🌧';
+  if (code <= 77) return '🌨';
+  if (code <= 82) return '🌧';
+  if (code <= 99) return '⛈';
+  return '🌤';
+}
+
+function getWeatherDesc(code) {
+  const descs = {0:'Clear skies',1:'Mostly clear',2:'Partly cloudy',3:'Overcast',45:'Foggy',48:'Icy fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Light snow',73:'Snow',75:'Heavy snow',77:'Snow grains',80:'Showers',81:'Heavy showers',82:'Violent showers',95:'Thunderstorm',96:'Thunderstorm with hail',99:'Severe thunderstorm'};
+  return descs[code] || 'Partly cloudy';
+}
+
+async function fetchWeather() {
+  try {
+    const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=35.9007&longitude=-77.5272&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,is_day&temperature_unit=fahrenheit&wind_speed_unit=mph');
+    const d = await r.json();
+    const c = d.current;
+    document.getElementById('w-temp').textContent = Math.round(c.temperature_2m) + '°F';
+    document.getElementById('w-feels').textContent = Math.round(c.apparent_temperature) + '°F';
+    document.getElementById('w-humidity').textContent = Math.round(c.relative_humidity_2m) + '%';
+    document.getElementById('w-wind').textContent = Math.round(c.wind_speed_10m) + ' mph';
+    document.getElementById('w-desc').textContent = getWeatherDesc(c.weather_code);
+    document.getElementById('w-icon').textContent = getWeatherIcon(c.weather_code, c.is_day);
+  } catch(e) {
+    document.getElementById('w-desc').textContent = 'Weather unavailable';
+  }
+}
+
+updateClock();
+fetchWeather();
+fetchSettings();
+fetchReviews();
+setInterval(updateClock, 1000);
+setInterval(fetchWeather, 10 * 60 * 1000);
+setInterval(() => { fetchSettings(); fetchReviews(); }, 15 * 60 * 1000);
+</script>
+</body>
+</html>
