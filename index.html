@@ -427,6 +427,26 @@
     background: var(--gold);
     margin-bottom: 1em;
   }
+
+  .facility-slide {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+  }
+
+  .facility-slide.active {
+    opacity: 1;
+    position: relative;
+    height: 100%;
+  }
+
+  .facility-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+  }
 </style>
 </head>
 <body>
@@ -503,16 +523,17 @@
       <div class="section-label">Why Blue Granite Storage</div>
       <div class="gold-line"></div>
       <div class="about-points" id="about-points">
+        <div class="about-point"><div class="point-dot"></div><span>Responsive, caring local team — we're here when you need us</span></div>
         <div class="about-point"><div class="point-dot"></div><span>Brand new, state-of-the-art facility built for your convenience</span></div>
         <div class="about-point"><div class="point-dot"></div><span>Climate-controlled units available for sensitive belongings</span></div>
-        <div class="about-point"><div class="point-dot"></div><span>Advanced security with 24/7 camera monitoring</span></div>
+        <div class="about-point"><div class="point-dot"></div><span>Advanced security with 24/7 camera monitoring & gated access</span></div>
         <div class="about-point"><div class="point-dot"></div><span>Extended gate access — 4:30 AM to 10:30 PM daily</span></div>
         <div class="about-point"><div class="point-dot"></div><span>Easy online reservations & payments at bluegranitestorage.com</span></div>
       </div>
     </div>
 
     <div class="reviews-section">
-      <div class="section-label">What Our Customers Say</div>
+      <div class="section-label">Our Facility & Customer Reviews</div>
       <div class="gold-line"></div>
       <div class="reviews-carousel" id="reviews-carousel">
         <!-- Reviews injected by JS -->
@@ -604,33 +625,53 @@ async function fetchReviews() {
   }
 }
 
+const facilityPhotos = ['facility1.jpeg', 'facility2.jpeg', 'facility3.jpeg'];
+
 function buildReviews() {
   const carousel = document.getElementById('reviews-carousel');
   const dots = document.getElementById('review-dots');
   carousel.innerHTML = '';
   dots.innerHTML = '';
   currentReview = 0;
-  reviews.forEach((r, i) => {
-    const stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
-    const slide = document.createElement('div');
-    slide.className = 'review-slide' + (i === 0 ? ' active' : '');
-    slide.innerHTML = `<div class="stars">${stars}</div><div class="review-text">"${r.text}"</div><div class="review-author">— ${r.author}</div>`;
-    carousel.appendChild(slide);
+
+  // Build combined slides: interleave photos and reviews
+  const slides = [];
+  const maxLen = Math.max(reviews.length, facilityPhotos.length);
+  for (let i = 0; i < maxLen; i++) {
+    if (i < facilityPhotos.length) slides.push({ type: 'photo', src: facilityPhotos[i] });
+    if (i < reviews.length) slides.push({ type: 'review', data: reviews[i] });
+  }
+  // If no reviews yet, just show photos
+  if (reviews.length === 0) facilityPhotos.forEach(src => slides.push({ type: 'photo', src }));
+
+  slides.forEach((slide, i) => {
+    const el = document.createElement('div');
+    if (slide.type === 'photo') {
+      el.className = 'facility-slide' + (i === 0 ? ' active' : '');
+      el.innerHTML = `<img src="${slide.src}" alt="Blue Granite Storage facility">`;
+    } else {
+      const stars = '★'.repeat(slide.data.rating) + '☆'.repeat(5 - slide.data.rating);
+      el.className = 'review-slide' + (i === 0 ? ' active' : '');
+      el.innerHTML = `<div class="stars">${stars}</div><div class="review-text">"${slide.data.text}"</div><div class="review-author">— ${slide.data.author}</div>`;
+    }
+    carousel.appendChild(el);
     const dot = document.createElement('div');
     dot.className = 'review-dot' + (i === 0 ? ' active' : '');
     dots.appendChild(dot);
   });
+
+  window._allSlides = slides;
   if (reviewTimer) clearInterval(reviewTimer);
-  if (reviews.length > 1) reviewTimer = setInterval(rotateReview, 7000);
+  if (slides.length > 1) reviewTimer = setInterval(rotateReview, 7000);
 }
 
 function rotateReview() {
-  const slides = document.querySelectorAll('.review-slide');
+  const slides = document.querySelectorAll('.review-slide, .facility-slide');
   const dots = document.querySelectorAll('.review-dot');
   if (!slides.length) return;
   slides[currentReview].classList.remove('active');
   dots[currentReview].classList.remove('active');
-  currentReview = (currentReview + 1) % reviews.length;
+  currentReview = (currentReview + 1) % slides.length;
   slides[currentReview].classList.add('active');
   dots[currentReview].classList.add('active');
 }
