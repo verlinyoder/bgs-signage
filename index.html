@@ -396,6 +396,98 @@
     background: var(--gold);
   }
 
+  .qr-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5vh;
+    margin-top: 0.5vh;
+  }
+
+  .qr-label {
+    font-size: clamp(0.7rem, 1vw, 0.9rem);
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+
+  .qr-img {
+    width: min(110px, 11vw);
+    border-radius: 8px;
+    opacity: 0.9;
+  }
+
+  .qr-url {
+    font-size: clamp(0.6rem, 0.9vw, 0.8rem);
+    font-weight: 300;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+  }
+
+  /* Animated weather icons */
+  .w-sunny { display:inline-block; width:60px; height:60px; position:relative; }
+  .w-sunny .sun { width:50px; height:50px; background:#f5a623; border-radius:50%; position:absolute; top:5px; left:5px; animation:pulse-sun 3s ease-in-out infinite; }
+  .w-sunny .ray { position:absolute; width:4px; height:12px; background:#f5a623; border-radius:2px; top:50%; left:50%; transform-origin:0 -22px; animation:pulse-sun 3s ease-in-out infinite; }
+  @keyframes pulse-sun { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.8;transform:scale(1.05)} }
+
+  .w-cloudy { display:inline-block; width:70px; height:50px; position:relative; animation:float-cloud 4s ease-in-out infinite; }
+  .w-cloudy .cloud { position:absolute; background:#c9cad4; border-radius:50px; }
+  .w-cloudy .c1 { width:50px; height:25px; bottom:0; left:10px; }
+  .w-cloudy .c2 { width:35px; height:25px; bottom:10px; left:5px; border-radius:50%; }
+  .w-cloudy .c3 { width:30px; height:25px; bottom:10px; left:25px; border-radius:50%; }
+  @keyframes float-cloud { 0%,100%{transform:translateX(0)} 50%{transform:translateX(5px)} }
+
+  .w-partlycloudy { display:inline-block; width:75px; height:55px; position:relative; }
+  .w-partlycloudy .sun2 { width:36px; height:36px; background:#f5a623; border-radius:50%; position:absolute; top:0; left:0; animation:pulse-sun 3s ease-in-out infinite; }
+  .w-partlycloudy .cloud2 { position:absolute; background:#c9cad4; border-radius:50px; }
+  .w-partlycloudy .cl1 { width:50px; height:22px; bottom:0; right:0; }
+  .w-partlycloudy .cl2 { width:30px; height:22px; bottom:12px; right:5px; border-radius:50%; }
+  .w-partlycloudy .cl3 { width:25px; height:22px; bottom:12px; right:22px; border-radius:50%; }
+
+  .w-rainy { display:inline-block; width:70px; height:60px; position:relative; }
+  .w-rainy .cloud3 { position:absolute; background:#8a9ab0; border-radius:50px; }
+  .w-rainy .cr1 { width:50px; height:22px; top:0; left:10px; }
+  .w-rainy .cr2 { width:32px; height:22px; top:10px; left:5px; border-radius:50%; }
+  .w-rainy .cr3 { width:28px; height:22px; top:10px; left:25px; border-radius:50%; }
+  .w-rainy .drop { position:absolute; width:3px; background:#5b8db8; border-radius:2px; animation:rain 1.2s linear infinite; }
+  .w-rainy .d1 { height:10px; left:18px; top:36px; animation-delay:0s; }
+  .w-rainy .d2 { height:10px; left:30px; top:36px; animation-delay:0.3s; }
+  .w-rainy .d3 { height:10px; left:42px; top:36px; animation-delay:0.6s; }
+  .w-rainy .d4 { height:10px; left:24px; top:48px; animation-delay:0.15s; }
+  .w-rainy .d5 { height:10px; left:36px; top:48px; animation-delay:0.45s; }
+  @keyframes rain { 0%{opacity:0;transform:translateY(-5px)} 50%{opacity:1} 100%{opacity:0;transform:translateY(10px)} }
+
+  .w-stormy { display:inline-block; width:70px; height:65px; position:relative; }
+  .w-stormy .cloud4 { position:absolute; background:#484150; border-radius:50px; }
+  .w-stormy .cs1 { width:50px; height:22px; top:0; left:10px; }
+  .w-stormy .cs2 { width:32px; height:22px; top:10px; left:5px; border-radius:50%; }
+  .w-stormy .cs3 { width:28px; height:22px; top:10px; left:25px; border-radius:50%; }
+  .w-stormy .bolt { position:absolute; left:28px; top:32px; width:0; height:0; border-left:8px solid transparent; border-right:8px solid transparent; border-top:18px solid #f5a623; animation:bolt-flash 1.5s ease-in-out infinite; }
+  .w-stormy .bolt::after { content:''; position:absolute; left:-5px; top:14px; width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:14px solid #f5a623; }
+  @keyframes bolt-flash { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .w-night { display:inline-block; width:60px; height:60px; position:relative; }
+  .w-night .moon { width:40px; height:40px; background:#c9cad4; border-radius:50%; position:absolute; top:10px; left:10px; box-shadow:inset -10px -2px 0 0 #1e3a52; animation:pulse-sun 4s ease-in-out infinite; }
+
+  .w-foggy { display:inline-block; width:70px; height:50px; position:relative; }
+  .w-foggy .fog-line { position:absolute; height:4px; background:#8a9ab0; border-radius:2px; animation:fog-drift 3s ease-in-out infinite; }
+  .w-foggy .f1 { width:60px; top:10px; left:5px; animation-delay:0s; }
+  .w-foggy .f2 { width:45px; top:22px; left:12px; animation-delay:0.5s; }
+  .w-foggy .f3 { width:55px; top:34px; left:8px; animation-delay:1s; }
+  @keyframes fog-drift { 0%,100%{opacity:0.6;transform:translateX(0)} 50%{opacity:1;transform:translateX(4px)} }
+
+  .w-snowy { display:inline-block; width:70px; height:60px; position:relative; }
+  .w-snowy .cloud5 { position:absolute; background:#c9cad4; border-radius:50px; }
+  .w-snowy .csn1 { width:50px; height:22px; top:0; left:10px; }
+  .w-snowy .csn2 { width:32px; height:22px; top:10px; left:5px; border-radius:50%; }
+  .w-snowy .csn3 { width:28px; height:22px; top:10px; left:25px; border-radius:50%; }
+  .w-snowy .flake { position:absolute; color:#fff; font-size:10px; animation:snow-fall 2s linear infinite; }
+  .w-snowy .fl1 { left:18px; top:32px; animation-delay:0s; }
+  .w-snowy .fl2 { left:32px; top:32px; animation-delay:0.6s; }
+  .w-snowy .fl3 { left:46px; top:32px; animation-delay:1.2s; }
+  @keyframes snow-fall { 0%{opacity:0;transform:translateY(-5px)} 50%{opacity:1} 100%{opacity:0;transform:translateY(15px)} }
+
   /* Gold divider accent */
   .gold-line {
     width: 40px;
@@ -441,8 +533,14 @@
   </div>
 
   <div class="welcome-block">
-    <div class="hello">Welcome</div>
+    <div class="hello" id="greeting">Welcome</div>
     <div class="message" id="welcome-msg">We're glad you're here.<br>Let us know how we can help.</div>
+  </div>
+
+  <div class="qr-block">
+    <div class="qr-label">Rent or Reserve Online</div>
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://www.bluegranitestorage.com/pages/rent&bgcolor=1e3a52&color=ffffff&qzone=1" alt="QR Code" class="qr-img">
+    <div class="qr-url">bluegranitestorage.com</div>
   </div>
 
   <div class="clock-block">
@@ -462,7 +560,7 @@
   <!-- WEATHER -->
   <div class="weather-section">
     <div class="weather-main">
-      <div class="weather-icon" id="w-icon">⛅</div>
+      <div class="weather-icon" id="w-icon"></div>
       <div>
         <div class="weather-temp" id="w-temp">--°F</div>
         <div class="weather-desc" id="w-desc">Loading weather...</div>
@@ -661,19 +759,27 @@ function updateClock() {
   const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   document.getElementById('clock-date').textContent = `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+  document.getElementById('greeting').textContent = getGreeting();
 }
 
 function getWeatherIcon(code, isDay) {
-  if (code === 0) return isDay ? '☀️' : '🌙';
-  if (code <= 2) return isDay ? '⛅' : '🌤';
-  if (code === 3) return '☁️';
-  if (code <= 49) return '🌫';
-  if (code <= 57) return '🌦';
-  if (code <= 67) return '🌧';
-  if (code <= 77) return '🌨';
-  if (code <= 82) return '🌧';
-  if (code <= 99) return '⛈';
-  return '🌤';
+  if (!isDay) return `<div class="w-night"><div class="moon"></div></div>`;
+  if (code === 0) return `<div class="w-sunny"><div class="sun"></div></div>`;
+  if (code <= 2) return `<div class="w-partlycloudy"><div class="sun2"></div><div class="cloud2 cl1"></div><div class="cloud2 cl2"></div><div class="cloud2 cl3"></div></div>`;
+  if (code === 3) return `<div class="w-cloudy"><div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div></div>`;
+  if (code <= 49) return `<div class="w-foggy"><div class="fog-line f1"></div><div class="fog-line f2"></div><div class="fog-line f3"></div></div>`;
+  if (code <= 67) return `<div class="w-rainy"><div class="cloud3 cr1"></div><div class="cloud3 cr2"></div><div class="cloud3 cr3"></div><div class="drop d1"></div><div class="drop d2"></div><div class="drop d3"></div><div class="drop d4"></div><div class="drop d5"></div></div>`;
+  if (code <= 77) return `<div class="w-snowy"><div class="cloud5 csn1"></div><div class="cloud5 csn2"></div><div class="cloud5 csn3"></div><div class="flake fl1">❄</div><div class="flake fl2">❄</div><div class="flake fl3">❄</div></div>`;
+  if (code <= 99) return `<div class="w-stormy"><div class="cloud4 cs1"></div><div class="cloud4 cs2"></div><div class="cloud4 cs3"></div><div class="bolt"></div></div>`;
+  return `<div class="w-partlycloudy"><div class="sun2"></div><div class="cloud2 cl1"></div><div class="cloud2 cl2"></div><div class="cloud2 cl3"></div></div>`;
+}
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return 'Good Morning';
+  if (h >= 12 && h < 17) return 'Good Afternoon';
+  if (h >= 17 && h < 21) return 'Good Evening';
+  return 'Welcome';
 }
 
 function getWeatherDesc(code) {
@@ -691,7 +797,7 @@ async function fetchWeather() {
     document.getElementById('w-humidity').textContent = Math.round(c.relative_humidity_2m) + '%';
     document.getElementById('w-wind').textContent = Math.round(c.wind_speed_10m) + ' mph';
     document.getElementById('w-desc').textContent = getWeatherDesc(c.weather_code);
-    document.getElementById('w-icon').textContent = getWeatherIcon(c.weather_code, c.is_day);
+    document.getElementById('w-icon').innerHTML = getWeatherIcon(c.weather_code, c.is_day);
   } catch(e) {
     document.getElementById('w-desc').textContent = 'Weather unavailable';
   }
