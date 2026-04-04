@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="refresh" content="300">
 <title>Blue Granite Storage – Welcome</title>
 <link href="https://fonts.googleapis.com/css2?family=Museo+Slab:wght@300;700&display=swap" rel="stylesheet">
 <style>
@@ -732,7 +731,9 @@ const REVIEWS_CSV  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRL4ZvSM-r
 const TICKER_CSV   = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRL4ZvSM-rBD3-a7uEAJQi1r-lvbeFUvWm0gtmPDWE6P66DtIsPJyd0tuEOlNBrmQ/pub?gid=1062025029&single=true&output=csv';
 const ABOUT_CSV    = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRL4ZvSM-rBD3-a7uEAJQi1r-lvbeFUvWm0gtmPDWE6P66DtIsPJyd0tuEOlNBrmQ/pub?gid=1900608443&single=true&output=csv';
 
-// Ticker mode rotation: 'sheet' -> 'stocks' -> 'news' -> repeat
+// Ticker mode rotation
+let tickerSpeedPerItem = 10;
+let pageRefreshMinutes = 30;
 let tickerMode = 'sheet';
 let tickerModeTimer = null;
 let sheetMessages = [];
@@ -774,16 +775,13 @@ function buildTickerContent() {
   window.tickerMessages = messages;
   window.showStocks = controls.stocks;
 
-  if (tickerModeTimer) clearInterval(tickerModeTimer);
+  // setTickerMode handles timer internally now
   const hasBoth = messages.length > 0 && controls.stocks && stockData.length > 0;
-  if (hasBoth) {
+  if (hasBoth || messages.length > 0) {
     tickerMode = 'messages';
     setTickerMode('messages');
-    tickerModeTimer = setInterval(rotateTicker, 40000);
   } else if (controls.stocks && stockData.length > 0) {
     setTickerMode('stocks');
-  } else if (messages.length > 0) {
-    setTickerMode('messages');
   }
 }
 
@@ -803,19 +801,27 @@ function setTickerMode(mode) {
   }
 
   el.innerHTML = html;
-  // Dynamic speed: ~12 seconds per item so each message gets enough time
-  const itemCount = el.querySelectorAll('.ticker-item').length / 2; // divide by 2 since doubled
-  const duration = Math.max(30, itemCount * 12);
+  // Dynamic speed based on sheet setting
+  const itemCount = Math.max(1, el.querySelectorAll('.ticker-item').length / 2);
+  const duration = Math.max(20, itemCount * tickerSpeedPerItem);
   el.style.animation = 'none';
   el.offsetHeight;
   el.style.animation = `ticker-move ${duration}s linear infinite`;
+
+  // Rotate to next mode only after full loop completes
+  if (tickerModeTimer) clearInterval(tickerModeTimer);
+  tickerModeTimer = setTimeout(rotateTicker, duration * 1000);
 }
 
 function rotateTicker() {
   const modes = [];
   if ((window.tickerMessages || []).length > 0) modes.push('messages');
   if (window.showStocks && stockData.length > 0) modes.push('stocks');
-  if (modes.length <= 1) return;
+  if (modes.length <= 1) {
+    // No rotation needed, just restart same mode
+    setTickerMode(tickerMode);
+    return;
+  }
   const idx = modes.indexOf(tickerMode);
   tickerMode = modes[(idx + 1) % modes.length];
   setTickerMode(tickerMode);
@@ -904,6 +910,19 @@ async function fetchSettings() {
     if (map.promo_badge) document.getElementById('promo-badge').textContent = map.promo_badge;
     if (map.promo_headline) document.getElementById('promo-headline').innerHTML = map.promo_headline.replace(/\\n/g, '<br>');
     if (map.promo_detail) document.getElementById('promo-detail').textContent = map.promo_detail;
+
+    // Timing controls
+    tickerSpeedPerItem = parseInt(map.ticker_speed) || 10;
+    pageRefreshMinutes = parseInt(map.refresh_minutes) || 30;
+
+    // Update meta refresh tag dynamically
+    let metaRefresh = document.querySelector('meta[http-equiv="refresh"]');
+    if (!metaRefresh) {
+      metaRefresh = document.createElement('meta');
+      metaRefresh.setAttribute('http-equiv', 'refresh');
+      document.head.appendChild(metaRefresh);
+    }
+    metaRefresh.setAttribute('content', String(pageRefreshMinutes * 60));
 
     // Store ticker controls globally
     window.tickerControls = {
