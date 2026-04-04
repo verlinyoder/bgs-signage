@@ -547,7 +547,7 @@
     display: flex;
     align-items: center;
     white-space: nowrap;
-    animation: ticker-move 30s linear infinite;
+    animation: ticker-move 60s linear infinite;
     gap: 6vw;
   }
 
@@ -803,9 +803,12 @@ function setTickerMode(mode) {
   }
 
   el.innerHTML = html;
+  // Dynamic speed: ~12 seconds per item so each message gets enough time
+  const itemCount = el.querySelectorAll('.ticker-item').length / 2; // divide by 2 since doubled
+  const duration = Math.max(30, itemCount * 12);
   el.style.animation = 'none';
   el.offsetHeight;
-  el.style.animation = '';
+  el.style.animation = `ticker-move ${duration}s linear infinite`;
 }
 
 function rotateTicker() {
