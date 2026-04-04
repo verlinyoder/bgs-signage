@@ -574,12 +574,12 @@
   }
 
   .ticker-mode-label {
-    font-size: clamp(0.7rem, 1vw, 0.9rem);
+    font-size: clamp(0.65rem, 0.9vw, 0.8rem);
     font-weight: 700;
-    color: var(--gold);
+    color: #fff;
     white-space: nowrap;
-    padding: 0 1vw 0 0.5vw;
-    flex-shrink: 0;
+    margin-top: 0.2em;
+    min-height: 1em;
   }
 
   .ticker-up { color: #4caf50; font-weight: 700; }
@@ -717,9 +717,9 @@
   <div class="ticker-qr">
     <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://www.bluegranitestorage.com/pages/rent&bgcolor=2b5272&color=ffffff&qzone=1" alt="QR">
     <div class="ticker-qr-text">Scan to<br>Rent Online</div>
+    <div class="ticker-mode-label" id="ticker-mode-label"></div>
   </div>
   <div class="ticker-scroll-wrap">
-    <div class="ticker-mode-label" id="ticker-mode-label"></div>
     <div class="ticker-scroll" id="ticker-scroll">
       <div class="ticker-item"><div class="ticker-dot"></div>Loading...</div>
     </div>
@@ -792,10 +792,9 @@ function setTickerMode(mode) {
 }
 
 function rotateTicker() {
-  const modes = ['sheet', 'stocks', 'news'].filter(m => {
+  const modes = ['sheet', 'stocks'].filter(m => {
     if (m === 'sheet') return sheetMessages.length > 0;
     if (m === 'stocks') return stockData.length > 0;
-    if (m === 'news') return newsHeadlines.length > 0;
     return false;
   });
   if (modes.length <= 1) return;
@@ -1039,7 +1038,6 @@ async function init() {
   await fetchAbout();
   setTickerMode('sheet');
   await fetchStocks();
-  await fetchNews();
   // Start ticker rotation: 40s per mode
   tickerModeTimer = setInterval(rotateTicker, 40000);
 }
@@ -1048,7 +1046,6 @@ init();
 setInterval(updateClock, 1000);
 setInterval(fetchWeather, 10 * 60 * 1000);
 setInterval(fetchStocks, 5 * 60 * 1000);
-setInterval(fetchNews, 15 * 60 * 1000);
 setInterval(() => { fetchSettings(); fetchReviews(); fetchTickerSheet(); fetchAbout(); }, 5 * 60 * 1000);
 </script>
 </body>
