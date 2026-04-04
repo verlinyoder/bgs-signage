@@ -186,8 +186,18 @@
   }
 
   .weather-icon {
-    font-size: clamp(3.12rem, 5vw, 4.38rem);
     line-height: 1;
+    width: clamp(55px, 5.5vw, 75px);
+    height: clamp(55px, 5.5vw, 75px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .weather-icon > div, .weather-icon svg {
+    width: 100%;
+    height: 100%;
   }
 
   .weather-temp {
@@ -426,9 +436,8 @@
   }
 
   /* Animated weather icons */
-  .w-sunny { display:inline-block; width:60px; height:60px; position:relative; }
-  .w-sunny .sun { width:50px; height:50px; background:#f5a623; border-radius:50%; position:absolute; top:5px; left:5px; animation:pulse-sun 3s ease-in-out infinite; }
-  .w-sunny .ray { position:absolute; width:4px; height:12px; background:#f5a623; border-radius:2px; top:50%; left:50%; transform-origin:0 -22px; animation:pulse-sun 3s ease-in-out infinite; }
+  .w-sunny { display:block; width:100%; height:100%; animation:pulse-sun 3s ease-in-out infinite; }
+  .w-sunny svg { width:100%; height:100%; }
   @keyframes pulse-sun { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.8;transform:scale(1.05)} }
 
   .w-cloudy { display:inline-block; width:70px; height:50px; position:relative; animation:float-cloud 4s ease-in-out infinite; }
@@ -763,15 +772,16 @@ function updateClock() {
 }
 
 function getWeatherIcon(code, isDay) {
-  if (!isDay) return `<div class="w-night"><div class="moon"></div></div>`;
-  if (code === 0) return `<div class="w-sunny"><div class="sun"></div></div>`;
-  if (code <= 2) return `<div class="w-partlycloudy"><div class="sun2"></div><div class="cloud2 cl1"></div><div class="cloud2 cl2"></div><div class="cloud2 cl3"></div></div>`;
-  if (code === 3) return `<div class="w-cloudy"><div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div></div>`;
-  if (code <= 49) return `<div class="w-foggy"><div class="fog-line f1"></div><div class="fog-line f2"></div><div class="fog-line f3"></div></div>`;
-  if (code <= 67) return `<div class="w-rainy"><div class="cloud3 cr1"></div><div class="cloud3 cr2"></div><div class="cloud3 cr3"></div><div class="drop d1"></div><div class="drop d2"></div><div class="drop d3"></div><div class="drop d4"></div><div class="drop d5"></div></div>`;
-  if (code <= 77) return `<div class="w-snowy"><div class="cloud5 csn1"></div><div class="cloud5 csn2"></div><div class="cloud5 csn3"></div><div class="flake fl1">❄</div><div class="flake fl2">❄</div><div class="flake fl3">❄</div></div>`;
-  if (code <= 99) return `<div class="w-stormy"><div class="cloud4 cs1"></div><div class="cloud4 cs2"></div><div class="cloud4 cs3"></div><div class="bolt"></div></div>`;
-  return `<div class="w-partlycloudy"><div class="sun2"></div><div class="cloud2 cl1"></div><div class="cloud2 cl2"></div><div class="cloud2 cl3"></div></div>`;
+  const style = 'font-size:clamp(2.5rem,4.5vw,4rem);line-height:1;display:block;';
+  if (!isDay) return `<span style="${style}">🌙</span>`;
+  if (code === 0) return `<span style="${style}">☀️</span>`;
+  if (code <= 2) return `<span style="${style}">⛅</span>`;
+  if (code === 3) return `<span style="${style}">☁️</span>`;
+  if (code <= 49) return `<span style="${style}">🌫️</span>`;
+  if (code <= 67) return `<span style="${style}">🌧️</span>`;
+  if (code <= 77) return `<span style="${style}">🌨️</span>`;
+  if (code <= 99) return `<span style="${style}">⛈️</span>`;
+  return `<span style="${style}">⛅</span>`;
 }
 
 function getGreeting() {
