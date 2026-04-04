@@ -573,6 +573,21 @@
     100% { transform: translateX(-50%); }
   }
 
+  .ticker-mode-label {
+    font-size: clamp(0.7rem, 1vw, 0.9rem);
+    font-weight: 700;
+    color: var(--gold);
+    white-space: nowrap;
+    padding: 0 1vw 0 0.5vw;
+    flex-shrink: 0;
+  }
+
+  .ticker-up { color: #4caf50; font-weight: 700; }
+  .ticker-down { color: #ef5350; font-weight: 700; }
+  .ticker-symbol { color: var(--gold); font-weight: 700; margin-right: 0.3em; }
+  .news-dot { background: #5b8db8 !important; }
+  .blue-dot { background: #5b8db8 !important; }
+
   /* Gold divider accent */
   .gold-line {
     width: 40px;
@@ -704,20 +719,9 @@
     <div class="ticker-qr-text">Scan to<br>Rent Online</div>
   </div>
   <div class="ticker-scroll-wrap">
+    <div class="ticker-mode-label" id="ticker-mode-label"></div>
     <div class="ticker-scroll" id="ticker-scroll">
-      <div class="ticker-item"><div class="ticker-dot"></div>Welcome to Blue Granite Storage — Tarboro's newest self-storage facility</div>
-      <div class="ticker-item"><div class="ticker-dot"></div>Grand Opening Special — Reserve any unit today and get your second month FREE</div>
-      <div class="ticker-item"><div class="ticker-dot"></div>Climate-controlled units available — perfect for furniture, electronics, and valuables</div>
-      <div class="ticker-item"><div class="ticker-dot"></div>Gate access 4:30 AM to 10:30 PM daily — your schedule, your storage</div>
-      <div class="ticker-item"><div class="ticker-dot"></div>Reserve online anytime at bluegranitestorage.com — quick, easy, no hassle</div>
-      <div class="ticker-item"><div class="ticker-dot"></div>Questions? Give us a call at (252) 618-7748 — we're happy to help</div>
-      <!-- Duplicate for seamless loop -->
-      <div class="ticker-item"><div class="ticker-dot"></div>Welcome to Blue Granite Storage — Tarboro's newest self-storage facility</div>
-      <div class="ticker-item"><div class="ticker-dot"></div>Grand Opening Special — Reserve any unit today and get your second month FREE</div>
-      <div class="ticker-item"><div class="ticker-dot"></div>Climate-controlled units available — perfect for furniture, electronics, and valuables</div>
-      <div class="ticker-item"><div class="ticker-dot"></div>Gate access 4:30 AM to 10:30 PM daily — your schedule, your storage</div>
-      <div class="ticker-item"><div class="ticker-dot"></div>Reserve online anytime at bluegranitestorage.com — quick, easy, no hassle</div>
-      <div class="ticker-item"><div class="ticker-dot"></div>Questions? Give us a call at (252) 618-7748 — we're happy to help</div>
+      <div class="ticker-item"><div class="ticker-dot"></div>Loading...</div>
     </div>
   </div>
 </div>
@@ -725,6 +729,15 @@
 <script>
 const SETTINGS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRL4ZvSM-rBD3-a7uEAJQi1r-lvbeFUvWm0gtmPDWE6P66DtIsPJyd0tuEOlNBrmQ/pub?gid=966423653&single=true&output=csv';
 const REVIEWS_CSV  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRL4ZvSM-rBD3-a7uEAJQi1r-lvbeFUvWm0gtmPDWE6P66DtIsPJyd0tuEOlNBrmQ/pub?gid=1988993265&single=true&output=csv';
+const TICKER_CSV   = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRL4ZvSM-rBD3-a7uEAJQi1r-lvbeFUvWm0gtmPDWE6P66DtIsPJyd0tuEOlNBrmQ/pub?gid=1062025029&single=true&output=csv';
+const ABOUT_CSV    = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRL4ZvSM-rBD3-a7uEAJQi1r-lvbeFUvWm0gtmPDWE6P66DtIsPJyd0tuEOlNBrmQ/pub?gid=1900608443&single=true&output=csv';
+
+// Ticker mode rotation: 'sheet' -> 'stocks' -> 'news' -> repeat
+let tickerMode = 'sheet';
+let tickerModeTimer = null;
+let sheetMessages = [];
+let newsHeadlines = [];
+let stockData = [];
 
 function parseCSV(text) {
   const lines = text.trim().split('\n');
@@ -742,6 +755,149 @@ function parseCSV(text) {
   });
 }
 
+function buildTickerHTML(items, prefix) {
+  if (!items.length) return '';
+  const doubled = [...items, ...items];
+  return doubled.map(item => `<div class="ticker-item"><div class="ticker-dot ${prefix}-dot"></div>${item}</div>`).join('');
+}
+
+function setTickerMode(mode) {
+  const el = document.getElementById('ticker-scroll');
+  const label = document.getElementById('ticker-mode-label');
+  let html = '';
+  let labelText = '';
+
+  if (mode === 'sheet' && sheetMessages.length) {
+    html = buildTickerHTML(sheetMessages, 'gold');
+    labelText = '';
+  } else if (mode === 'stocks' && stockData.length) {
+    const items = stockData.map(s => `<span class="ticker-symbol">${s.symbol}</span> <span class="${s.change >= 0 ? 'ticker-up' : 'ticker-down'}">${s.price} ${s.change >= 0 ? '▲' : '▼'} ${Math.abs(s.change)}%</span>`);
+    html = buildTickerHTML(items, 'blue');
+    labelText = '📈 Markets';
+  } else if (mode === 'news' && newsHeadlines.length) {
+    html = buildTickerHTML(newsHeadlines, 'news');
+    labelText = '📰 Local News';
+  } else {
+    // fallback to sheet
+    html = buildTickerHTML(sheetMessages.length ? sheetMessages : ['Welcome to Blue Granite Storage — Tarboro, NC'], 'gold');
+  }
+
+  el.innerHTML = html;
+  if (label) label.textContent = labelText;
+
+  // Reset animation
+  el.style.animation = 'none';
+  el.offsetHeight;
+  el.style.animation = '';
+}
+
+function rotateTicker() {
+  const modes = ['sheet', 'stocks', 'news'].filter(m => {
+    if (m === 'sheet') return sheetMessages.length > 0;
+    if (m === 'stocks') return stockData.length > 0;
+    if (m === 'news') return newsHeadlines.length > 0;
+    return false;
+  });
+  if (modes.length <= 1) return;
+  const idx = modes.indexOf(tickerMode);
+  tickerMode = modes[(idx + 1) % modes.length];
+  setTickerMode(tickerMode);
+}
+
+async function fetchTickerSheet() {
+  try {
+    const res = await fetch(TICKER_CSV + '&t=' + Date.now());
+    const text = await res.text();
+    const rows = parseCSV(text);
+    const headerIdx = rows.findIndex(r => r.some(c => c.toLowerCase().trim().startsWith('active')));
+    if (headerIdx === -1) return;
+    sheetMessages = rows.slice(headerIdx + 1)
+      .filter(r => r[0] && r[0].toUpperCase() === 'YES' && r[1])
+      .map(r => r[1].trim())
+      .filter(Boolean);
+    if (tickerMode === 'sheet') setTickerMode('sheet');
+  } catch(e) { console.log('Ticker fetch failed:', e); }
+}
+
+async function fetchAbout() {
+  try {
+    const res = await fetch(ABOUT_CSV + '&t=' + Date.now());
+    const text = await res.text();
+    const rows = parseCSV(text);
+    const headerIdx = rows.findIndex(r => r.some(c => c.toLowerCase().trim().startsWith('active')));
+    if (headerIdx === -1) return;
+    const bullets = rows.slice(headerIdx + 1)
+      .filter(r => r[0] && r[0].toUpperCase() === 'YES' && r[1])
+      .map(r => r[1].trim())
+      .filter(Boolean);
+    if (bullets.length) {
+      const container = document.getElementById('about-points');
+      container.innerHTML = bullets.map(b => 
+        `<div class="about-point"><div class="point-dot"></div><span>${b}</span></div>`
+      ).join('');
+    }
+  } catch(e) { console.log('About fetch failed:', e); }
+}
+
+async function fetchStocks() {
+  // Use Yahoo Finance via allorigins proxy — no API key needed
+  const symbols = [
+    { symbol: 'S&P 500', ticker: '%5EGSPC' },
+    { symbol: 'Dow Jones', ticker: '%5EDJI' },
+    { symbol: 'NASDAQ', ticker: '%5EIXIC' },
+    { symbol: 'Gold', ticker: 'GC%3DF' },
+    { symbol: 'Silver', ticker: 'SI%3DF' },
+    { symbol: 'Bitcoin', ticker: 'BTC-USD' },
+  ];
+  try {
+    const results = [];
+    for (const s of symbols) {
+      try {
+        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${s.ticker}?interval=1d&range=1d`;
+        const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+        const res = await fetch(proxy);
+        const data = await res.json();
+        const meta = data?.chart?.result?.[0]?.meta;
+        if (meta) {
+          const price = meta.regularMarketPrice;
+          const prev = meta.chartPreviousClose || meta.previousClose;
+          const change = prev ? ((price - prev) / prev * 100).toFixed(2) : 0;
+          results.push({ symbol: s.symbol, price: price > 1000 ? price.toLocaleString('en-US', {maximumFractionDigits:0}) : price.toFixed(2), change: parseFloat(change) });
+        }
+      } catch(e) {}
+    }
+    if (results.length) stockData = results;
+  } catch(e) { console.log('Stocks fetch failed:', e); }
+}
+
+async function fetchNews() {
+  // RSS feeds via allorigins proxy
+  const feeds = [
+    'https://www.witn.com/rss/section/news',
+    'https://www.wral.com/rss/news/',
+  ];
+  try {
+    const headlines = [];
+    for (const feed of feeds) {
+      try {
+        const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(feed)}`;
+        const res = await fetch(proxy);
+        const text = await res.text();
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(text, 'text/xml');
+        const items = xml.querySelectorAll('item');
+        items.forEach((item, i) => {
+          if (i < 4) {
+            const title = item.querySelector('title')?.textContent?.trim();
+            if (title && title.length > 5) headlines.push(title);
+          }
+        });
+      } catch(e) {}
+    }
+    if (headlines.length) newsHeadlines = headlines;
+  } catch(e) { console.log('News fetch failed:', e); }
+}
+
 let reviews = [];
 let currentReview = 0;
 let reviewTimer = null;
@@ -753,25 +909,12 @@ async function fetchSettings() {
     const rows = parseCSV(text);
     const map = {};
     rows.forEach(r => { if (r[0] && r[1] && !r[0].toLowerCase().includes('field') && !r[0].toLowerCase().includes('blue granite')) map[r[0].trim()] = r[1].trim(); });
-
-    if (map.welcome_message) {
-      document.getElementById('welcome-msg').innerHTML = map.welcome_message.replace(/\\n/g, '<br>');
-    }
-    if (map.gate_hours) {
-      document.getElementById('gate-hours').textContent = map.gate_hours;
-    }
-    if (map.promo_badge) {
-      document.getElementById('promo-badge').textContent = map.promo_badge;
-    }
-    if (map.promo_headline) {
-      document.getElementById('promo-headline').innerHTML = map.promo_headline.replace(/\\n/g, '<br>');
-    }
-    if (map.promo_detail) {
-      document.getElementById('promo-detail').textContent = map.promo_detail;
-    }
-  } catch(e) {
-    console.log('Settings fetch failed:', e);
-  }
+    if (map.welcome_message) document.getElementById('welcome-msg').innerHTML = map.welcome_message.replace(/\\n/g, '<br>');
+    if (map.gate_hours) document.getElementById('gate-hours').textContent = map.gate_hours;
+    if (map.promo_badge) document.getElementById('promo-badge').textContent = map.promo_badge;
+    if (map.promo_headline) document.getElementById('promo-headline').innerHTML = map.promo_headline.replace(/\\n/g, '<br>');
+    if (map.promo_detail) document.getElementById('promo-detail').textContent = map.promo_detail;
+  } catch(e) { console.log('Settings fetch failed:', e); }
 }
 
 async function fetchReviews() {
@@ -779,28 +922,14 @@ async function fetchReviews() {
     const res = await fetch(REVIEWS_CSV + '&t=' + Date.now());
     const text = await res.text();
     const rows = parseCSV(text);
-    // Skip title rows — find the actual header row by looking for 'active'
     const headerRowIdx = rows.findIndex(r => r.some(c => c.toLowerCase().trim().startsWith('active')));
     if (headerRowIdx === -1) return;
-    const headers = rows[headerRowIdx].map(h => h.toLowerCase().trim());
-    const activeIdx = 0;
-    const nameIdx   = 1;
-    const textIdx   = 2;
-    const ratingIdx = 3;
-
     reviews = rows.slice(headerRowIdx + 1)
-      .filter(r => r[activeIdx] && r[activeIdx].toUpperCase() === 'YES')
-      .map(r => ({
-        author: r[nameIdx] || 'Google Review',
-        text:   r[textIdx] || '',
-        rating: parseInt(r[ratingIdx]) || 5
-      }))
+      .filter(r => r[0] && r[0].toUpperCase() === 'YES')
+      .map(r => ({ author: r[1] || 'Google Review', text: r[2] || '', rating: parseInt(r[3]) || 5 }))
       .filter(r => r.text.length > 0);
-
     if (reviews.length > 0) buildReviews();
-  } catch(e) {
-    console.log('Reviews fetch failed:', e);
-  }
+  } catch(e) { console.log('Reviews fetch failed:', e); }
 }
 
 const facilityPhotos = ['facility1.jpeg', 'facility2.jpeg', 'facility3.jpeg'];
@@ -811,17 +940,13 @@ function buildReviews() {
   carousel.innerHTML = '';
   dots.innerHTML = '';
   currentReview = 0;
-
-  // Build combined slides: interleave photos and reviews
   const slides = [];
   const maxLen = Math.max(reviews.length, facilityPhotos.length);
   for (let i = 0; i < maxLen; i++) {
     if (i < facilityPhotos.length) slides.push({ type: 'photo', src: facilityPhotos[i] });
     if (i < reviews.length) slides.push({ type: 'review', data: reviews[i] });
   }
-  // If no reviews yet, just show photos
   if (reviews.length === 0) facilityPhotos.forEach(src => slides.push({ type: 'photo', src }));
-
   slides.forEach((slide, i) => {
     const el = document.createElement('div');
     if (slide.type === 'photo') {
@@ -837,8 +962,6 @@ function buildReviews() {
     dot.className = 'review-dot' + (i === 0 ? ' active' : '');
     dots.appendChild(dot);
   });
-
-  window._allSlides = slides;
   if (reviewTimer) clearInterval(reviewTimer);
   if (slides.length > 1) reviewTimer = setInterval(rotateReview, 7000);
 }
@@ -903,18 +1026,30 @@ async function fetchWeather() {
     document.getElementById('w-wind').textContent = Math.round(c.wind_speed_10m) + ' mph';
     document.getElementById('w-desc').textContent = getWeatherDesc(c.weather_code);
     document.getElementById('w-icon').innerHTML = getWeatherIcon(c.weather_code, c.is_day);
-  } catch(e) {
-    document.getElementById('w-desc').textContent = 'Weather unavailable';
-  }
+  } catch(e) { document.getElementById('w-desc').textContent = 'Weather unavailable'; }
 }
 
-updateClock();
-fetchWeather();
-fetchSettings();
-fetchReviews();
+// Initialize everything
+async function init() {
+  updateClock();
+  fetchWeather();
+  fetchSettings();
+  fetchReviews();
+  await fetchTickerSheet();
+  await fetchAbout();
+  setTickerMode('sheet');
+  await fetchStocks();
+  await fetchNews();
+  // Start ticker rotation: 40s per mode
+  tickerModeTimer = setInterval(rotateTicker, 40000);
+}
+
+init();
 setInterval(updateClock, 1000);
 setInterval(fetchWeather, 10 * 60 * 1000);
-setInterval(() => { fetchSettings(); fetchReviews(); }, 5 * 60 * 1000);
+setInterval(fetchStocks, 5 * 60 * 1000);
+setInterval(fetchNews, 15 * 60 * 1000);
+setInterval(() => { fetchSettings(); fetchReviews(); fetchTickerSheet(); fetchAbout(); }, 5 * 60 * 1000);
 </script>
 </body>
 </html>
