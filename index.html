@@ -736,7 +736,6 @@ const ABOUT_CSV    = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRL4ZvSM-r
 let tickerMode = 'sheet';
 let tickerModeTimer = null;
 let sheetMessages = [];
-let newsHeadlines = [];
 let stockData = [];
 
 function parseCSV(text) {
@@ -761,42 +760,58 @@ function buildTickerHTML(items, prefix) {
   return doubled.map(item => `<div class="ticker-item"><div class="ticker-dot ${prefix}-dot"></div>${item}</div>`).join('');
 }
 
+function buildTickerContent() {
+  const controls = window.tickerControls || { stocks: true, promo: true, about: true, custom: true };
+  const messages = [];
+
+  if (controls.custom && sheetMessages.length) messages.push(...sheetMessages);
+  if (controls.promo && controls.promoText) messages.push(controls.promoText);
+  if (controls.about) {
+    const bullets = Array.from(document.querySelectorAll('#about-points .about-point span')).map(el => el.textContent);
+    messages.push(...bullets);
+  }
+
+  window.tickerMessages = messages;
+  window.showStocks = controls.stocks;
+
+  if (tickerModeTimer) clearInterval(tickerModeTimer);
+  const hasBoth = messages.length > 0 && controls.stocks && stockData.length > 0;
+  if (hasBoth) {
+    tickerMode = 'messages';
+    setTickerMode('messages');
+    tickerModeTimer = setInterval(rotateTicker, 40000);
+  } else if (controls.stocks && stockData.length > 0) {
+    setTickerMode('stocks');
+  } else if (messages.length > 0) {
+    setTickerMode('messages');
+  }
+}
+
 function setTickerMode(mode) {
   const el = document.getElementById('ticker-scroll');
   const label = document.getElementById('ticker-mode-label');
   let html = '';
-  let labelText = '';
 
-  if (mode === 'sheet' && sheetMessages.length) {
-    html = buildTickerHTML(sheetMessages, 'gold');
-    labelText = '';
-  } else if (mode === 'stocks' && stockData.length) {
+  if (mode === 'stocks' && stockData.length) {
     const items = stockData.map(s => `<span class="ticker-symbol">${s.symbol}</span> <span class="${s.change >= 0 ? 'ticker-up' : 'ticker-down'}">${s.price} ${s.change >= 0 ? '▲' : '▼'} ${Math.abs(s.change)}%</span>`);
     html = buildTickerHTML(items, 'blue');
-    labelText = '📈 Markets';
-  } else if (mode === 'news' && newsHeadlines.length) {
-    html = buildTickerHTML(newsHeadlines, 'news');
-    labelText = '📰 Local News';
+    if (label) label.textContent = '📈 Markets';
   } else {
-    // fallback to sheet
-    html = buildTickerHTML(sheetMessages.length ? sheetMessages : ['Welcome to Blue Granite Storage — Tarboro, NC'], 'gold');
+    const msgs = window.tickerMessages || sheetMessages;
+    html = buildTickerHTML(msgs.length ? msgs : ['Welcome to Blue Granite Storage'], 'gold');
+    if (label) label.textContent = '';
   }
 
   el.innerHTML = html;
-  if (label) label.textContent = labelText;
-
-  // Reset animation
   el.style.animation = 'none';
   el.offsetHeight;
   el.style.animation = '';
 }
 
 function rotateTicker() {
-  const modes = ['sheet', 'stocks'].filter(m => {
-    if (m === 'sheet') return sheetMessages.length > 0;
-    if (m === 'stocks') return stockData.length > 0;
-    return false;
-  });
+  const modes = [];
+  if ((window.tickerMessages || []).length > 0) modes.push('messages');
+  if (window.showStocks && stockData.length > 0) modes.push('stocks');
   if (modes.length <= 1) return;
   const idx = modes.indexOf(tickerMode);
   tickerMode = modes[(idx + 1) % modes.length];
@@ -814,7 +829,7 @@ async function fetchTickerSheet() {
       .filter(r => r[0] && r[0].toUpperCase() === 'YES' && r[1])
       .map(r => r[1].trim())
       .filter(Boolean);
-    if (tickerMode === 'sheet') setTickerMode('sheet');
+    buildTickerContent();
   } catch(e) { console.log('Ticker fetch failed:', e); }
 }
 
@@ -834,6 +849,7 @@ async function fetchAbout() {
       container.innerHTML = bullets.map(b => 
         `<div class="about-point"><div class="point-dot"></div><span>${b}</span></div>`
       ).join('');
+      buildTickerContent();
     }
   } catch(e) { console.log('About fetch failed:', e); }
 }
@@ -869,34 +885,6 @@ async function fetchStocks() {
   } catch(e) { console.log('Stocks fetch failed:', e); }
 }
 
-async function fetchNews() {
-  // RSS feeds via allorigins proxy
-  const feeds = [
-    'https://www.witn.com/rss/section/news',
-    'https://www.wral.com/rss/news/',
-  ];
-  try {
-    const headlines = [];
-    for (const feed of feeds) {
-      try {
-        const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(feed)}`;
-        const res = await fetch(proxy);
-        const text = await res.text();
-        const parser = new DOMParser();
-        const xml = parser.parseFromString(text, 'text/xml');
-        const items = xml.querySelectorAll('item');
-        items.forEach((item, i) => {
-          if (i < 4) {
-            const title = item.querySelector('title')?.textContent?.trim();
-            if (title && title.length > 5) headlines.push(title);
-          }
-        });
-      } catch(e) {}
-    }
-    if (headlines.length) newsHeadlines = headlines;
-  } catch(e) { console.log('News fetch failed:', e); }
-}
-
 let reviews = [];
 let currentReview = 0;
 let reviewTimer = null;
@@ -907,12 +895,24 @@ async function fetchSettings() {
     const text = await res.text();
     const rows = parseCSV(text);
     const map = {};
-    rows.forEach(r => { if (r[0] && r[1] && !r[0].toLowerCase().includes('field') && !r[0].toLowerCase().includes('blue granite')) map[r[0].trim()] = r[1].trim(); });
+    rows.forEach(r => { if (r[0] && r[1] && !r[0].toLowerCase().includes('field') && !r[0].toLowerCase().includes('blue granite') && !r[0].toLowerCase().includes('ticker display')) map[r[0].trim()] = r[1].trim(); });
     if (map.welcome_message) document.getElementById('welcome-msg').innerHTML = map.welcome_message.replace(/\\n/g, '<br>');
     if (map.gate_hours) document.getElementById('gate-hours').textContent = map.gate_hours;
     if (map.promo_badge) document.getElementById('promo-badge').textContent = map.promo_badge;
     if (map.promo_headline) document.getElementById('promo-headline').innerHTML = map.promo_headline.replace(/\\n/g, '<br>');
     if (map.promo_detail) document.getElementById('promo-detail').textContent = map.promo_detail;
+
+    // Store ticker controls globally
+    window.tickerControls = {
+      stocks:  (map.show_stocks        || 'YES').toUpperCase() === 'YES',
+      promo:   (map.show_promo_ticker  || 'YES').toUpperCase() === 'YES',
+      about:   (map.show_about_ticker  || 'YES').toUpperCase() === 'YES',
+      custom:  (map.show_custom_ticker || 'YES').toUpperCase() === 'YES',
+      promoText: [map.promo_headline, map.promo_detail].filter(Boolean).join(' — '),
+    };
+
+    // Rebuild ticker with new controls
+    buildTickerContent();
   } catch(e) { console.log('Settings fetch failed:', e); }
 }
 
@@ -1032,21 +1032,25 @@ async function fetchWeather() {
 async function init() {
   updateClock();
   fetchWeather();
-  fetchSettings();
+  await fetchSettings();
   fetchReviews();
   await fetchTickerSheet();
   await fetchAbout();
-  setTickerMode('sheet');
   await fetchStocks();
-  // Start ticker rotation: 40s per mode
-  tickerModeTimer = setInterval(rotateTicker, 40000);
+  buildTickerContent();
 }
 
 init();
 setInterval(updateClock, 1000);
 setInterval(fetchWeather, 10 * 60 * 1000);
 setInterval(fetchStocks, 5 * 60 * 1000);
-setInterval(() => { fetchSettings(); fetchReviews(); fetchTickerSheet(); fetchAbout(); }, 5 * 60 * 1000);
+setInterval(async () => { 
+  await fetchSettings(); 
+  await fetchReviews(); 
+  await fetchTickerSheet(); 
+  await fetchAbout();
+  buildTickerContent();
+}, 5 * 60 * 1000);
 </script>
 </body>
 </html>
