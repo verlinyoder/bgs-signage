@@ -166,7 +166,7 @@
   }
 
   .hours-label {
-    font-size: clamp(1.25rem, 1.38vw, 1rem);
+    font-size: clamp(1rem, 1.38vw, 1.25rem);
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--gold);
@@ -260,7 +260,7 @@
   }
 
   .weather-detail-label {
-    font-size: clamp(1.25rem, 1.38vw, 1rem);
+    font-size: clamp(1rem, 1.38vw, 1.25rem);
     letter-spacing: 0.15em;
     text-transform: uppercase;
     color: var(--text-muted);
@@ -281,7 +281,7 @@
     display: inline-block;
     background: var(--gold);
     color: #fff;
-    font-size: clamp(1.25rem, 1.38vw, 1rem);
+    font-size: clamp(1rem, 1.38vw, 1.25rem);
     font-weight: 700;
     letter-spacing: 0.2em;
     text-transform: uppercase;
@@ -323,7 +323,7 @@
   }
 
   .section-label {
-    font-size: clamp(1.25rem, 1.38vw, 1rem);
+    font-size: clamp(1rem, 1.38vw, 1.25rem);
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--gold);
@@ -628,7 +628,7 @@ window.addEventListener('load', scaleDisplay);
 </script>
 </head>
 <body>
-<div id="debug-overlay" id="debug-overlay">
+<div id="debug-overlay">
   <h3>🔧 Blue Granite Signage — Debug Panel &nbsp;&nbsp; <kbd>D</kbd> to close</h3>
   <div id="debug-content">Loading...</div>
 </div>
@@ -770,7 +770,68 @@ function sanitizeText(str) {
 function sanitizeWithBr(str) {
   if (!str) return '';
   // Allow only \n -> <br> conversion, escape everything else
-  return sanitizeText(str).replace(/\\n/g, '<br>');
+  return sanitizeText(str).replace(/\n/g, '<br>').replace(/\\n/g, '<br>');
+}
+
+
+
+// ── FETCH WITH TIMEOUT ──
+async function fetchWithTimeout(url, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    return res;
+  } catch(e) {
+    clearTimeout(timer);
+    throw e;
+  }
+}
+
+// ── LOCAL STORAGE CACHE ──
+function saveCache(key, data) {
+  try { localStorage.setItem('bgs_' + key, JSON.stringify({ ts: Date.now(), data })); } catch(e) {}
+}
+function loadCache(key) {
+  try {
+    const raw = localStorage.getItem('bgs_' + key);
+    if (!raw) return null;
+    return JSON.parse(raw).data;
+  } catch(e) { return null; }
+}
+
+
+
+function applyAbout(bullets) {
+  const container = document.getElementById('about-points');
+  if (!container || !bullets.length) return;
+  container.innerHTML = bullets.map(b =>
+    `<div class="about-point"><div class="point-dot"></div><span>${sanitizeText(b)}</span></div>`
+  ).join('');
+  buildTickerContent();
+}
+
+function applySettings(map) {
+  if (map.welcome_message) document.getElementById('welcome-msg').innerHTML = sanitizeWithBr(map.welcome_message);
+  if (map.gate_hours) document.getElementById('gate-hours').textContent = map.gate_hours;
+  if (map.promo_badge) document.getElementById('promo-badge').textContent = map.promo_badge;
+  if (map.promo_headline) document.getElementById('promo-headline').innerHTML = sanitizeWithBr(map.promo_headline);
+  if (map.promo_detail) document.getElementById('promo-detail').textContent = map.promo_detail.trim();
+  tickerSpeedPerItem = parseInt(map.ticker_speed) || 10;
+  pageRefreshMinutes = parseInt(map.refresh_minutes) || 30;
+  let metaRefresh = document.querySelector('meta[http-equiv="refresh"]');
+  if (!metaRefresh) { metaRefresh = document.createElement('meta'); metaRefresh.setAttribute('http-equiv', 'refresh'); document.head.appendChild(metaRefresh); }
+  metaRefresh.setAttribute('content', String(pageRefreshMinutes * 60));
+  window.tickerControls = {
+    stocks:  (map.show_stocks        || 'YES').toUpperCase() === 'YES',
+    promo:   (map.show_promo_ticker  || 'YES').toUpperCase() === 'YES',
+    about:   (map.show_about_ticker  || 'YES').toUpperCase() === 'YES',
+    custom:  (map.show_custom_ticker || 'YES').toUpperCase() === 'YES',
+    promoText: [map.promo_headline, map.promo_detail].filter(Boolean).join(' — '),
+  };
+  window._promoHeadline = map.promo_headline || '';
+  window._promoDetail   = map.promo_detail   || '';
 }
 
 function parseCSV(text) {
@@ -799,11 +860,11 @@ function buildTickerContent() {
   window.showStocks = controls.stocks;
 
   // setTickerMode handles timer internally now
-  const hasBoth = messages.length > 0 && controls.stocks && stockData.length > 0;
-  if (hasBoth || messages.length > 0) {
+  if (messages.length > 0) {
     tickerMode = 'messages';
     setTickerMode('messages');
   } else if (controls.stocks && stockData.length > 0) {
+    tickerMode = 'stocks';
     setTickerMode('stocks');
   }
 }
@@ -832,7 +893,7 @@ function setTickerMode(mode) {
   el.style.animation = `ticker-move ${duration}s linear infinite`;
 
   // Rotate to next mode only after full loop completes
-  if (tickerModeTimer) clearInterval(tickerModeTimer);
+  if (tickerModeTimer) clearTimeout(tickerModeTimer);
   tickerModeTimer = setTimeout(rotateTicker, duration * 1000);
 }
 
@@ -852,7 +913,7 @@ function rotateTicker() {
 
 async function fetchTickerSheet() {
   try {
-    const res = await fetch(TICKER_CSV + '&t=' + Date.now());
+    const res = await fetchWithTimeout(TICKER_CSV + '&t=' + Date.now());
     const text = await res.text();
     const rows = parseCSV(text);
     const headerIdx = rows.findIndex(r => r.some(c => c.toLowerCase().trim().startsWith('active')));
@@ -862,13 +923,14 @@ async function fetchTickerSheet() {
       .map(r => r[1].trim())
       .filter(Boolean);
     buildTickerContent();
+    saveCache('ticker', sheetMessages);
     debugStatus.ticker = 'ok';
   } catch(e) { console.log('Ticker fetch failed:', e); debugStatus.ticker = 'failed'; }
 }
 
 async function fetchAbout() {
   try {
-    const res = await fetch(ABOUT_CSV + '&t=' + Date.now());
+    const res = await fetchWithTimeout(ABOUT_CSV + '&t=' + Date.now());
     const text = await res.text();
     const rows = parseCSV(text);
     const headerIdx = rows.findIndex(r => r.some(c => c.toLowerCase().trim().startsWith('active')));
@@ -878,14 +940,16 @@ async function fetchAbout() {
       .map(r => r[1].trim())
       .filter(Boolean);
     if (bullets.length) {
-      const container = document.getElementById('about-points');
-      container.innerHTML = bullets.map(b => 
-        `<div class="about-point"><div class="point-dot"></div><span>${sanitizeText(b)}</span></div>`
-      ).join('');
-      buildTickerContent();
+      applyAbout(bullets);
+      saveCache('about', bullets);
       debugStatus.about = 'ok';
     }
-  } catch(e) { console.log('About fetch failed:', e); debugStatus.about = 'failed'; }
+  } catch(e) {
+    console.log('About fetch failed, using cache:', e);
+    debugStatus.about = 'cached';
+    const cached = loadCache('about');
+    if (cached) applyAbout(cached);
+  }
 }
 
 async function fetchStocks() {
@@ -904,7 +968,7 @@ async function fetchStocks() {
       try {
         const url = `https://query1.finance.yahoo.com/v8/finance/chart/${s.ticker}?interval=1d&range=1d`;
         const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-        const res = await fetch(proxy);
+        const res = await fetchWithTimeout(proxy, 5000);
         const data = await res.json();
         const meta = data?.chart?.result?.[0]?.meta;
         if (meta) {
@@ -925,48 +989,26 @@ let reviewTimer = null;
 
 async function fetchSettings() {
   try {
-    const res = await fetch(SETTINGS_CSV + '&t=' + Date.now());
+    const res = await fetchWithTimeout(SETTINGS_CSV + '&t=' + Date.now());
     const text = await res.text();
     const rows = parseCSV(text);
     const map = {};
     rows.forEach(r => { if (r[0] && r[1] && !r[0].toLowerCase().includes('field') && !r[0].toLowerCase().includes('blue granite') && !r[0].toLowerCase().includes('ticker display')) map[r[0].trim()] = r[1].trim(); });
-    if (map.welcome_message) document.getElementById('welcome-msg').innerHTML = sanitizeWithBr(map.welcome_message);
-    if (map.gate_hours) document.getElementById('gate-hours').textContent = map.gate_hours;
-    if (map.promo_badge) document.getElementById('promo-badge').textContent = map.promo_badge;
-    if (map.promo_headline) document.getElementById('promo-headline').innerHTML = sanitizeWithBr(map.promo_headline);
-    if (map.promo_detail) document.getElementById('promo-detail').textContent = map.promo_detail.trim();
-
-    // Timing controls
-    tickerSpeedPerItem = parseInt(map.ticker_speed) || 10;
-    pageRefreshMinutes = parseInt(map.refresh_minutes) || 30;
-
-    // Update meta refresh tag dynamically
-    let metaRefresh = document.querySelector('meta[http-equiv="refresh"]');
-    if (!metaRefresh) {
-      metaRefresh = document.createElement('meta');
-      metaRefresh.setAttribute('http-equiv', 'refresh');
-      document.head.appendChild(metaRefresh);
-    }
-    metaRefresh.setAttribute('content', String(pageRefreshMinutes * 60));
-
-    // Store ticker controls globally
-    window.tickerControls = {
-      stocks:  (map.show_stocks        || 'YES').toUpperCase() === 'YES',
-      promo:   (map.show_promo_ticker  || 'YES').toUpperCase() === 'YES',
-      about:   (map.show_about_ticker  || 'YES').toUpperCase() === 'YES',
-      custom:  (map.show_custom_ticker || 'YES').toUpperCase() === 'YES',
-      promoText: [map.promo_headline, map.promo_detail].filter(Boolean).join(' — '),
-    };
-
-    // Rebuild ticker with new controls
+    applySettings(map);
     buildTickerContent();
+    saveCache('settings', map);
     debugStatus.settings = 'ok'; debugStatus.lastSettings = new Date().toLocaleTimeString();
-  } catch(e) { console.log('Settings fetch failed:', e); debugStatus.settings = 'failed'; }
+  } catch(e) {
+    console.log('Settings fetch failed, using cache:', e);
+    debugStatus.settings = 'cached';
+    const cached = loadCache('settings');
+    if (cached) applySettings(cached);
+  }
 }
 
 async function fetchReviews() {
   try {
-    const res = await fetch(REVIEWS_CSV + '&t=' + Date.now());
+    const res = await fetchWithTimeout(REVIEWS_CSV + '&t=' + Date.now());
     const text = await res.text();
     const rows = parseCSV(text);
     const headerRowIdx = rows.findIndex(r => r.some(c => c.toLowerCase().trim().startsWith('active')));
@@ -975,7 +1017,7 @@ async function fetchReviews() {
       .filter(r => r[0] && r[0].toUpperCase() === 'YES')
       .map(r => ({ author: r[1] || 'Google Review', text: r[2] || '', rating: parseInt(r[3]) || 5 }))
       .filter(r => r.text.length > 0);
-    if (reviews.length > 0) buildReviews();
+    if (reviews.length > 0) { buildReviews(); saveCache('reviews', reviews); }
     debugStatus.reviews = 'ok';
   } catch(e) { console.log('Reviews fetch failed:', e); debugStatus.reviews = 'failed'; }
 }
@@ -1065,7 +1107,7 @@ function getWeatherDesc(code) {
 
 async function fetchWeather() {
   try {
-    const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=35.9007&longitude=-77.5272&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,is_day&temperature_unit=fahrenheit&wind_speed_unit=mph');
+    const r = await fetchWithTimeout('https://api.open-meteo.com/v1/forecast?latitude=35.9007&longitude=-77.5272&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,is_day&temperature_unit=fahrenheit&wind_speed_unit=mph');
     const d = await r.json();
     const c = d.current;
     document.getElementById('w-temp').textContent = Math.round(c.temperature_2m) + '°F';
@@ -1128,6 +1170,16 @@ document.addEventListener('keydown', e => {
 
 // Initialize everything
 async function init() {
+  // Load cached content immediately for fast first paint
+  const cachedSettings = loadCache('settings');
+  if (cachedSettings) applySettings(cachedSettings);
+  const cachedReviews = loadCache('reviews');
+  if (cachedReviews && cachedReviews.length) { reviews = cachedReviews; buildReviews(); }
+  const cachedTicker = loadCache('ticker');
+  if (cachedTicker && cachedTicker.length) { sheetMessages = cachedTicker; }
+  const cachedAbout = loadCache('about');
+  if (cachedAbout && cachedAbout.length) applyAbout(cachedAbout);
+
   updateClock();
   fetchWeather();
   await fetchSettings();
@@ -1143,13 +1195,18 @@ scaleDisplay();
 setInterval(updateClock, 1000);
 setInterval(fetchWeather, 10 * 60 * 1000);
 setInterval(fetchStocks, 5 * 60 * 1000);
-setInterval(async () => { 
-  await fetchSettings(); 
-  await fetchReviews(); 
-  await fetchTickerSheet(); 
-  await fetchAbout();
-  buildTickerContent();
-}, 5 * 60 * 1000);
+async function refreshLoop() {
+  try {
+    await fetchSettings();
+    await fetchReviews();
+    await fetchTickerSheet();
+    await fetchAbout();
+    buildTickerContent();
+  } finally {
+    setTimeout(refreshLoop, 5 * 60 * 1000);
+  }
+}
+setTimeout(refreshLoop, 5 * 60 * 1000);
 </script>
 </body>
 </html>
