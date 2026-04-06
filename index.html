@@ -490,7 +490,7 @@
     border: 2px solid var(--gold);
     box-shadow: 0 -6px 16px rgba(0,0,0,0.5);
     position: relative;
-    bottom: 35px;
+    bottom: 20px;
     background: #2b5272;
   }
 
@@ -778,10 +778,10 @@ function parseCSV(text) {
   return result.data.map(row => row.map(cell => (cell || '').trim()));
 }
 
-function buildTickerHTML(items, prefix) {
+function buildTickerHTML(items, prefix, raw = false) {
   if (!items.length) return '';
   const doubled = [...items, ...items];
-  return doubled.map(item => `<div class="ticker-item"><div class="ticker-dot ${prefix}-dot"></div>${sanitizeText(item)}</div>`).join('');
+  return doubled.map(item => `<div class="ticker-item"><div class="ticker-dot ${prefix}-dot"></div>${raw ? item : sanitizeText(item)}</div>`).join('');
 }
 
 function buildTickerContent() {
@@ -815,7 +815,7 @@ function setTickerMode(mode) {
 
   if (mode === 'stocks' && stockData.length) {
     const items = stockData.map(s => `<span class="ticker-symbol">${s.symbol}</span> <span class="${s.change >= 0 ? 'ticker-up' : 'ticker-down'}">${s.price} ${s.change >= 0 ? '▲' : '▼'} ${Math.abs(s.change)}%</span>`);
-    html = buildTickerHTML(items, 'blue');
+    html = buildTickerHTML(items, 'blue', true);
     if (label) label.textContent = '📈 Markets';
   } else {
     const msgs = window.tickerMessages || sheetMessages;
