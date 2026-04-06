@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Blue Granite Storage – Welcome</title>
 <link href="https://fonts.googleapis.com/css2?family=Museo+Slab:wght@300;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
   :root {
     --blue: #2b5272;
@@ -573,6 +574,31 @@
     object-fit: cover;
     border-radius: 8px;
   }
+
+  /* ── DEBUG OVERLAY ── */
+  #debug-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    background: rgba(0,0,0,0.92);
+    color: #00ff88;
+    font-family: monospace;
+    font-size: 13px;
+    padding: 20px;
+    z-index: 9999;
+    line-height: 1.8;
+    border-bottom: 2px solid #aa6d32;
+  }
+  #debug-overlay.visible { display: block; }
+  #debug-overlay h3 { color: #aa6d32; margin-bottom: 10px; font-size: 15px; }
+  #debug-overlay .ok { color: #00ff88; }
+  #debug-overlay .err { color: #ff4444; }
+  #debug-overlay .warn { color: #ffaa00; }
+  #debug-overlay kbd {
+    background: #333; border: 1px solid #666;
+    border-radius: 3px; padding: 1px 5px;
+    font-size: 11px; color: #ccc;
+  }
 </style>
 <script>
 function scaleDisplay() {
@@ -592,6 +618,10 @@ window.addEventListener('load', scaleDisplay);
 </script>
 </head>
 <body>
+<div id="debug-overlay" id="debug-overlay">
+  <h3>🔧 Blue Granite Signage — Debug Panel &nbsp;&nbsp; <kbd>D</kbd> to close</h3>
+  <div id="debug-content">Loading...</div>
+</div>
 <div id="display-root">
 
 <!-- LEFT PANEL -->
@@ -734,19 +764,8 @@ function sanitizeWithBr(str) {
 }
 
 function parseCSV(text) {
-  const lines = text.trim().split('\n');
-  return lines.map(line => {
-    const cols = [];
-    let cur = '', inQ = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') { inQ = !inQ; }
-      else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
-      else { cur += ch; }
-    }
-    cols.push(cur.trim());
-    return cols;
-  });
+  const result = Papa.parse(text.trim(), { skipEmptyLines: true });
+  return result.data.map(row => row.map(cell => (cell || '').trim()));
 }
 
 function buildTickerHTML(items, prefix) {
@@ -833,7 +852,8 @@ async function fetchTickerSheet() {
       .map(r => r[1].trim())
       .filter(Boolean);
     buildTickerContent();
-  } catch(e) { console.log('Ticker fetch failed:', e); }
+    debugStatus.ticker = 'ok';
+  } catch(e) { console.log('Ticker fetch failed:', e); debugStatus.ticker = 'failed'; }
 }
 
 async function fetchAbout() {
@@ -853,8 +873,9 @@ async function fetchAbout() {
         `<div class="about-point"><div class="point-dot"></div><span>${sanitizeText(b)}</span></div>`
       ).join('');
       buildTickerContent();
+      debugStatus.about = 'ok';
     }
-  } catch(e) { console.log('About fetch failed:', e); }
+  } catch(e) { console.log('About fetch failed:', e); debugStatus.about = 'failed'; }
 }
 
 async function fetchStocks() {
@@ -884,8 +905,8 @@ async function fetchStocks() {
         }
       } catch(e) {}
     }
-    if (results.length) stockData = results;
-  } catch(e) { console.log('Stocks fetch failed:', e); }
+    if (results.length) { stockData = results; debugStatus.stocks = 'ok'; debugStatus.lastStocks = new Date().toLocaleTimeString(); }
+  } catch(e) { console.log('Stocks fetch failed:', e); debugStatus.stocks = 'failed'; }
 }
 
 let reviews = [];
@@ -929,7 +950,8 @@ async function fetchSettings() {
 
     // Rebuild ticker with new controls
     buildTickerContent();
-  } catch(e) { console.log('Settings fetch failed:', e); }
+    debugStatus.settings = 'ok'; debugStatus.lastSettings = new Date().toLocaleTimeString();
+  } catch(e) { console.log('Settings fetch failed:', e); debugStatus.settings = 'failed'; }
 }
 
 async function fetchReviews() {
@@ -944,7 +966,8 @@ async function fetchReviews() {
       .map(r => ({ author: r[1] || 'Google Review', text: r[2] || '', rating: parseInt(r[3]) || 5 }))
       .filter(r => r.text.length > 0);
     if (reviews.length > 0) buildReviews();
-  } catch(e) { console.log('Reviews fetch failed:', e); }
+    debugStatus.reviews = 'ok';
+  } catch(e) { console.log('Reviews fetch failed:', e); debugStatus.reviews = 'failed'; }
 }
 
 const facilityPhotos = ['facility1.jpeg', 'facility2.jpeg', 'facility3.jpeg'];
@@ -1041,8 +1064,57 @@ async function fetchWeather() {
     document.getElementById('w-wind').textContent = Math.round(c.wind_speed_10m) + ' mph';
     document.getElementById('w-desc').textContent = getWeatherDesc(c.weather_code);
     document.getElementById('w-icon').innerHTML = getWeatherIcon(c.weather_code, c.is_day);
-  } catch(e) { document.getElementById('w-desc').textContent = 'Weather unavailable'; }
+    debugStatus.weather = 'ok'; debugStatus.lastWeather = new Date().toLocaleTimeString();
+  } catch(e) { document.getElementById('w-desc').textContent = 'Weather unavailable'; debugStatus.weather = 'failed'; }
 }
+
+
+// ── DEBUG OVERLAY ──
+const debugStatus = {
+  weather: 'pending',
+  settings: 'pending',
+  reviews: 'pending',
+  ticker: 'pending',
+  about: 'pending',
+  stocks: 'pending',
+  lastWeather: '--',
+  lastSettings: '--',
+  lastStocks: '--',
+};
+
+function updateDebug() {
+  const el = document.getElementById('debug-content');
+  if (!el) return;
+  const now = new Date().toLocaleTimeString();
+  const statusIcon = s => s === 'ok' ? '<span class="ok">✓ OK</span>' : s === 'pending' ? '<span class="warn">⏳ Pending</span>' : `<span class="err">✗ ${s}</span>`;
+  el.innerHTML = `
+    <table style="border-collapse:collapse;width:100%">
+      <tr><td style="padding:2px 16px 2px 0;color:#aaa">Weather (Open-Meteo)</td><td>${statusIcon(debugStatus.weather)}</td><td style="color:#666;padding-left:16px">${debugStatus.lastWeather}</td></tr>
+      <tr><td style="padding:2px 16px 2px 0;color:#aaa">Settings (Google Sheet)</td><td>${statusIcon(debugStatus.settings)}</td><td style="color:#666;padding-left:16px">${debugStatus.lastSettings}</td></tr>
+      <tr><td style="padding:2px 16px 2px 0;color:#aaa">Reviews</td><td>${statusIcon(debugStatus.reviews)}</td><td></td></tr>
+      <tr><td style="padding:2px 16px 2px 0;color:#aaa">Ticker Sheet</td><td>${statusIcon(debugStatus.ticker)}</td><td></td></tr>
+      <tr><td style="padding:2px 16px 2px 0;color:#aaa">About Sheet</td><td>${statusIcon(debugStatus.about)}</td><td></td></tr>
+      <tr><td style="padding:2px 16px 2px 0;color:#aaa">Stocks (Yahoo/AllOrigins)</td><td>${statusIcon(debugStatus.stocks)}</td><td style="color:#666;padding-left:16px">${debugStatus.lastStocks}</td></tr>
+    </table>
+    <div style="margin-top:12px;color:#666">
+      Ticker mode: <span style="color:#aa6d32">${tickerMode}</span> &nbsp;|&nbsp;
+      Speed: <span style="color:#aa6d32">${tickerSpeedPerItem}s/item</span> &nbsp;|&nbsp;
+      Refresh: <span style="color:#aa6d32">${pageRefreshMinutes}min</span> &nbsp;|&nbsp;
+      Sheet messages: <span style="color:#aa6d32">${sheetMessages.length}</span> &nbsp;|&nbsp;
+      Stock symbols: <span style="color:#aa6d32">${stockData.length}</span> &nbsp;|&nbsp;
+      Reviews: <span style="color:#aa6d32">${reviews.length}</span>
+    </div>
+    <div style="margin-top:8px;color:#444;font-size:11px">Debug opened at ${now} — press D to close</div>
+  `;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'd' || e.key === 'D') {
+    const overlay = document.getElementById('debug-overlay');
+    overlay.classList.toggle('visible');
+    if (overlay.classList.contains('visible')) updateDebug();
+  }
+});
 
 // Initialize everything
 async function init() {
