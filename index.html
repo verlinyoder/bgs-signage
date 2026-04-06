@@ -314,12 +314,12 @@
   }
 
   .about-section {
-    padding: 1.5vh 2.5vw;
+    padding: 2.5vh 2.5vw;
     border-right: 1px solid rgba(201,202,212,0.1);
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
-    gap: 1vh;
+    justify-content: center;
+    gap: 2vh;
   }
 
   .section-label {
@@ -334,26 +334,26 @@
   .about-points {
     display: flex;
     flex-direction: column;
-    gap: 1.2vh;
+    gap: 2.5vh;
   }
 
   .about-point {
     display: flex;
     align-items: flex-start;
     gap: 0.8vw;
-    font-size: clamp(1.25rem, 1.88vw, 1.62rem);
+    font-size: clamp(1.35rem, 2.1vw, 1.8rem);
     font-weight: 300;
     color: var(--text-light);
     line-height: 1.4;
   }
 
   .point-dot {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     background: var(--gold);
     flex-shrink: 0;
-    margin-top: 0.45em;
+    margin-top: 0.5em;
   }
 
   /* REVIEWS */
@@ -707,10 +707,7 @@ window.addEventListener('load', scaleDisplay);
       <div class="gold-line"></div>
       <div class="about-points" id="about-points">
         <div class="about-point"><div class="point-dot"></div><span>Responsive, caring local team — we're here when you need us</span></div>
-        <div class="about-point"><div class="point-dot"></div><span>Brand new, state-of-the-art facility built for your convenience</span></div>
-        <div class="about-point"><div class="point-dot"></div><span>Climate-controlled units available for sensitive belongings</span></div>
         <div class="about-point"><div class="point-dot"></div><span>Advanced security with 24/7 camera monitoring & gated access</span></div>
-        <div class="about-point"><div class="point-dot"></div><span>Extended gate access — 4:30 AM to 10:30 PM daily</span></div>
         <div class="about-point"><div class="point-dot"></div><span>Easy online reservations & payments at bluegranitestorage.com</span></div>
       </div>
     </div>
@@ -743,7 +740,7 @@ window.addEventListener('load', scaleDisplay);
 <!-- END display-root -->
 
 <script>
-const APP_VERSION = '1.0.4';
+const APP_VERSION = '1.0.6';
 
 const SETTINGS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRL4ZvSM-rBD3-a7uEAJQi1r-lvbeFUvWm0gtmPDWE6P66DtIsPJyd0tuEOlNBrmQ/pub?gid=966423653&single=true&output=csv';
 const REVIEWS_CSV  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRL4ZvSM-rBD3-a7uEAJQi1r-lvbeFUvWm0gtmPDWE6P66DtIsPJyd0tuEOlNBrmQ/pub?gid=1988993265&single=true&output=csv';
@@ -955,29 +952,40 @@ async function fetchAbout() {
 }
 
 async function fetchStocks() {
+  const FINNHUB_KEY = 'd79v8chr01qspme68s50d79v8chr01qspme68s5g';
   const symbols = [
-    { symbol: 'S&P 500', ticker: '%5EGSPC' },
-    { symbol: 'Dow Jones', ticker: '%5EDJI' },
-    { symbol: 'NASDAQ', ticker: '%5EIXIC' },
-    { symbol: 'Gold', ticker: 'GC%3DF' },
-    { symbol: 'Silver', ticker: 'SI%3DF' },
-    { symbol: 'Bitcoin', ticker: 'BTC-USD' },
+    { symbol: 'S&P 500',   ticker: 'SPY' },
+    { symbol: 'Dow Jones', ticker: 'DIA' },
+    { symbol: 'NASDAQ',    ticker: 'QQQ' },
+    { symbol: 'Gold',      ticker: 'GLD' },
+    { symbol: 'Silver',    ticker: 'SLV' },
+    { symbol: 'Bitcoin',   ticker: 'BINANCE:BTCUSDT', crypto: true },
   ];
   try {
     const results = await Promise.all(symbols.map(async s => {
       try {
-        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${s.ticker}?interval=1d&range=1d`;
-        const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-        const res = await fetchWithTimeout(proxy, 10000);
-        const data = await res.json();
-        const meta = data?.chart?.result?.[0]?.meta;
-        if (!meta) return null;
-        const price = meta.regularMarketPrice;
-        const prev = meta.chartPreviousClose || meta.previousClose;
+        let price, prev;
+        if (s.crypto) {
+          // Crypto quote endpoint
+          const url = `https://finnhub.io/api/v1/crypto/candle?symbol=${s.ticker}&resolution=D&count=2&token=${FINNHUB_KEY}`;
+          const res = await fetchWithTimeout(url, 10000);
+          const data = await res.json();
+          if (data.s !== 'ok' || !data.c?.length) return null;
+          price = data.c[data.c.length - 1];
+          prev = data.c.length > 1 ? data.c[data.c.length - 2] : price;
+        } else {
+          // Stock quote endpoint
+          const url = `https://finnhub.io/api/v1/quote?symbol=${s.ticker}&token=${FINNHUB_KEY}`;
+          const res = await fetchWithTimeout(url, 10000);
+          const data = await res.json();
+          if (!data.c) return null;
+          price = data.c;
+          prev = data.pc;
+        }
         const change = prev ? ((price - prev) / prev * 100).toFixed(2) : 0;
         return {
           symbol: s.symbol,
-          price: price > 1000 ? price.toLocaleString('en-US', {maximumFractionDigits:0}) : price.toFixed(2),
+          price: price > 1000 ? price.toLocaleString('en-US', {maximumFractionDigits: 0}) : price.toFixed(2),
           change: parseFloat(change)
         };
       } catch(e) { return null; }
