@@ -741,7 +741,7 @@ window.addEventListener('load', scaleDisplay);
 <!-- END display-root -->
 
 <script>
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.1.1';
 
 const SETTINGS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRL4ZvSM-rBD3-a7uEAJQi1r-lvbeFUvWm0gtmPDWE6P66DtIsPJyd0tuEOlNBrmQ/pub?gid=966423653&single=true&output=csv';
 const REVIEWS_CSV  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRL4ZvSM-rBD3-a7uEAJQi1r-lvbeFUvWm0gtmPDWE6P66DtIsPJyd0tuEOlNBrmQ/pub?gid=1988993265&single=true&output=csv';
@@ -963,25 +963,31 @@ async function fetchStocks() {
     { symbol: 'NASDAQ',    ticker: 'QQQ', multiplier: 40 },
     { symbol: 'Gold',      ticker: 'GLD', multiplier: 10 },
     { symbol: 'Silver',    ticker: 'SLV', multiplier: 1 },
-    { symbol: 'Bitcoin',   ticker: 'BINANCE:BTCUSDT', crypto: true },
+    { symbol: 'Bitcoin',   ticker: 'BINANCE:BTCUSDT', coinbase: 'BTC-USD', crypto: true },
   ];
   try {
     const results = await Promise.all(symbols.map(async s => {
       try {
         let price, prev;
         if (s.crypto) {
-          const url = `https://finnhub.io/api/v1/crypto/candle?symbol=${s.ticker}&resolution=D&count=2&token=${FINNHUB_KEY}`;
-          const res = await fetchWithTimeout(url, 10000);
-          const data = await res.json();
-          if (data.s !== 'ok' || !data.c?.length) return null;
-          price = data.c[data.c.length - 1];
-          prev = data.c.length > 1 ? data.c[data.c.length - 2] : price;
-          const change = prev ? ((price - prev) / prev * 100) : 0;
-          return {
-            symbol: s.symbol,
-            price: price > 1000 ? price.toLocaleString('en-US', {maximumFractionDigits: 0}) : price.toFixed(2),
-            change: parseFloat(change.toFixed(2))
-          };
+          // Use Coinbase public API - no key needed
+          const spotRes = await fetchWithTimeout(`https://api.coinbase.com/v2/prices/${s.coinbase}/spot`, 10000);
+          const spotData = await spotRes.json();
+          const spotPrice = parseFloat(spotData?.data?.amount);
+          if (!spotPrice) return null;
+          // Get previous close via Finnhub for % change
+          try {
+            const candleUrl = `https://finnhub.io/api/v1/crypto/candle?symbol=${s.ticker}&resolution=D&count=2&token=${FINNHUB_KEY}`;
+            const candleRes = await fetchWithTimeout(candleUrl, 8000);
+            const candleData = await candleRes.json();
+            if (candleData.s === 'ok' && candleData.c?.length >= 2) {
+              const prev = candleData.c[candleData.c.length - 2];
+              const change = prev ? ((spotPrice - prev) / prev * 100) : 0;
+              return { symbol: s.symbol, price: spotPrice.toLocaleString('en-US', {maximumFractionDigits: 0}), change: parseFloat(change.toFixed(2)) };
+            }
+          } catch(e) {}
+          // Fallback - just show price with no change
+          return { symbol: s.symbol, price: spotPrice.toLocaleString('en-US', {maximumFractionDigits: 0}), change: 0 };
         } else {
           const url = `https://finnhub.io/api/v1/quote?symbol=${s.ticker}&token=${FINNHUB_KEY}`;
           const res = await fetchWithTimeout(url, 10000);
