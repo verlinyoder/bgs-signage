@@ -741,7 +741,7 @@ window.addEventListener('load', scaleDisplay);
 <!-- END display-root -->
 
 <script>
-const APP_VERSION = '1.1.3';
+const APP_VERSION = '1.1.4';
 
 const SETTINGS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRL4ZvSM-rBD3-a7uEAJQi1r-lvbeFUvWm0gtmPDWE6P66DtIsPJyd0tuEOlNBrmQ/pub?gid=966423653&single=true&output=csv';
 const REVIEWS_CSV  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRL4ZvSM-rBD3-a7uEAJQi1r-lvbeFUvWm0gtmPDWE6P66DtIsPJyd0tuEOlNBrmQ/pub?gid=1988993265&single=true&output=csv';
@@ -976,12 +976,18 @@ async function fetchStocks() {
           const data = await res.json();
           if (!data.price) return null;
           const price = parseFloat(data.price);
-          // gold-api.com returns chp = change percent directly
-          const change = data.chp ?? 0;
+          // Try multiple field names for % change
+          let change = data.chp ?? data.changePercent ?? data.change_percent ?? data.pct_change ?? null;
+          if (change === null && data.ch && data.price) {
+            // Calculate from absolute change if available
+            change = data.ch / (data.price - data.ch) * 100;
+          }
+          // Log response fields to help debug
+          console.log(`${s.symbol} gold-api response keys:`, Object.keys(data), 'sample:', JSON.stringify(data).substring(0, 200));
           return {
             symbol: s.symbol,
             price: price > 1000 ? price.toLocaleString('en-US', {maximumFractionDigits: 0}) : price.toFixed(2),
-            change: parseFloat(parseFloat(change).toFixed(2))
+            change: change !== null ? parseFloat(parseFloat(change).toFixed(2)) : 0
           };
         } else if (s.crypto) {
           // Use CoinGecko free API - no key, includes 24h change
