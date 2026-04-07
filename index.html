@@ -741,7 +741,7 @@ window.addEventListener('load', scaleDisplay);
 <!-- END display-root -->
 
 <script>
-const APP_VERSION = '1.0.9';
+const APP_VERSION = '1.1.0';
 
 const SETTINGS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRL4ZvSM-rBD3-a7uEAJQi1r-lvbeFUvWm0gtmPDWE6P66DtIsPJyd0tuEOlNBrmQ/pub?gid=966423653&single=true&output=csv';
 const REVIEWS_CSV  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRL4ZvSM-rBD3-a7uEAJQi1r-lvbeFUvWm0gtmPDWE6P66DtIsPJyd0tuEOlNBrmQ/pub?gid=1988993265&single=true&output=csv';
@@ -958,25 +958,30 @@ async function fetchAbout() {
 async function fetchStocks() {
   const FINNHUB_KEY = 'd79v8chr01qspme68s50d79v8chr01qspme68s5g';
   const symbols = [
-    { symbol: 'S&P 500',   ticker: 'SPY',              multiplier: 10 },
-    { symbol: 'Dow Jones', ticker: 'DIA',              multiplier: 100 },
-    { symbol: 'NASDAQ',    ticker: 'QQQ',              multiplier: 40 },
-    { symbol: 'Gold',      ticker: 'OANDA:XAU_USD',   forex: true },
-    { symbol: 'Silver',    ticker: 'OANDA:XAG_USD',   forex: true },
+    { symbol: 'S&P 500',   ticker: 'SPY', multiplier: 10 },
+    { symbol: 'Dow Jones', ticker: 'DIA', multiplier: 100 },
+    { symbol: 'NASDAQ',    ticker: 'QQQ', multiplier: 40 },
+    { symbol: 'Gold',      ticker: 'GLD', multiplier: 10 },
+    { symbol: 'Silver',    ticker: 'SLV', multiplier: 1 },
     { symbol: 'Bitcoin',   ticker: 'BINANCE:BTCUSDT', crypto: true },
   ];
   try {
     const results = await Promise.all(symbols.map(async s => {
       try {
         let price, prev;
-        if (s.crypto || s.forex) {
-          const endpoint = s.crypto ? 'crypto/candle' : 'forex/candle';
-          const url = `https://finnhub.io/api/v1/${endpoint}?symbol=${s.ticker}&resolution=D&count=2&token=${FINNHUB_KEY}`;
+        if (s.crypto) {
+          const url = `https://finnhub.io/api/v1/crypto/candle?symbol=${s.ticker}&resolution=D&count=2&token=${FINNHUB_KEY}`;
           const res = await fetchWithTimeout(url, 10000);
           const data = await res.json();
           if (data.s !== 'ok' || !data.c?.length) return null;
           price = data.c[data.c.length - 1];
           prev = data.c.length > 1 ? data.c[data.c.length - 2] : price;
+          const change = prev ? ((price - prev) / prev * 100) : 0;
+          return {
+            symbol: s.symbol,
+            price: price > 1000 ? price.toLocaleString('en-US', {maximumFractionDigits: 0}) : price.toFixed(2),
+            change: parseFloat(change.toFixed(2))
+          };
         } else {
           const url = `https://finnhub.io/api/v1/quote?symbol=${s.ticker}&token=${FINNHUB_KEY}`;
           const res = await fetchWithTimeout(url, 10000);
@@ -984,22 +989,14 @@ async function fetchStocks() {
           if (!data.c) return null;
           price = data.c;
           prev = data.pc;
-          // Apply multiplier to approximate real index value
-          if (s.multiplier) price = price * s.multiplier;
-          if (s.multiplier && prev) prev = prev * s.multiplier;
           const dp = data.dp ?? (prev ? ((price - prev) / prev * 100) : 0);
+          const displayPrice = s.multiplier ? price * s.multiplier : price;
           return {
             symbol: s.symbol,
-            price: price > 1000 ? price.toLocaleString('en-US', {maximumFractionDigits: 0}) : price.toFixed(2),
+            price: displayPrice > 1000 ? displayPrice.toLocaleString('en-US', {maximumFractionDigits: 0}) : displayPrice.toFixed(2),
             change: parseFloat(dp.toFixed(2))
           };
         }
-        const change = prev ? ((price - prev) / prev * 100) : 0;
-        return {
-          symbol: s.symbol,
-          price: price > 1000 ? price.toLocaleString('en-US', {maximumFractionDigits: 0}) : price.toFixed(2),
-          change: parseFloat(change.toFixed(2))
-        };
       } catch(e) { return null; }
     }));
     const valid = results.filter(Boolean);
