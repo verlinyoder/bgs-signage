@@ -741,7 +741,7 @@ window.addEventListener('load', scaleDisplay);
 <!-- END display-root -->
 
 <script>
-const APP_VERSION = '1.1.1';
+const APP_VERSION = '1.1.2';
 
 const SETTINGS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRL4ZvSM-rBD3-a7uEAJQi1r-lvbeFUvWm0gtmPDWE6P66DtIsPJyd0tuEOlNBrmQ/pub?gid=966423653&single=true&output=csv';
 const REVIEWS_CSV  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRL4ZvSM-rBD3-a7uEAJQi1r-lvbeFUvWm0gtmPDWE6P66DtIsPJyd0tuEOlNBrmQ/pub?gid=1988993265&single=true&output=csv';
@@ -961,15 +961,29 @@ async function fetchStocks() {
     { symbol: 'S&P 500',   ticker: 'SPY', multiplier: 10 },
     { symbol: 'Dow Jones', ticker: 'DIA', multiplier: 100 },
     { symbol: 'NASDAQ',    ticker: 'QQQ', multiplier: 40 },
-    { symbol: 'Gold',      ticker: 'GLD', multiplier: 10 },
-    { symbol: 'Silver',    ticker: 'SLV', multiplier: 1 },
+    { symbol: 'Gold',      goldapi: 'XAU' },
+    { symbol: 'Silver',    goldapi: 'XAG' },
     { symbol: 'Bitcoin',   ticker: 'BINANCE:BTCUSDT', coinbase: 'BTC-USD', crypto: true },
   ];
   try {
     const results = await Promise.all(symbols.map(async s => {
       try {
         let price, prev;
-        if (s.crypto) {
+        if (s.goldapi) {
+          // Use gold-api.com — free, no key, real spot prices, CORS enabled
+          const url = `https://api.gold-api.com/price/${s.goldapi}`;
+          const res = await fetchWithTimeout(url, 10000);
+          const data = await res.json();
+          if (!data.price) return null;
+          const price = parseFloat(data.price);
+          const prev = data.prev_close_price ? parseFloat(data.prev_close_price) : null;
+          const change = prev ? ((price - prev) / prev * 100) : 0;
+          return {
+            symbol: s.symbol,
+            price: price > 1000 ? price.toLocaleString('en-US', {maximumFractionDigits: 0}) : price.toFixed(2),
+            change: parseFloat(change.toFixed(2))
+          };
+        } else if (s.crypto) {
           // Use Coinbase public API - no key needed
           const spotRes = await fetchWithTimeout(`https://api.coinbase.com/v2/prices/${s.coinbase}/spot`, 10000);
           const spotData = await spotRes.json();
