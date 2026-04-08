@@ -741,7 +741,7 @@ window.addEventListener('load', scaleDisplay);
 <!-- END display-root -->
 
 <script>
-const APP_VERSION = '1.1.4';
+const APP_VERSION = '1.1.5';
 
 const SETTINGS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRL4ZvSM-rBD3-a7uEAJQi1r-lvbeFUvWm0gtmPDWE6P66DtIsPJyd0tuEOlNBrmQ/pub?gid=966423653&single=true&output=csv';
 const REVIEWS_CSV  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRL4ZvSM-rBD3-a7uEAJQi1r-lvbeFUvWm0gtmPDWE6P66DtIsPJyd0tuEOlNBrmQ/pub?gid=1988993265&single=true&output=csv';
@@ -976,18 +976,24 @@ async function fetchStocks() {
           const data = await res.json();
           if (!data.price) return null;
           const price = parseFloat(data.price);
-          // Try multiple field names for % change
-          let change = data.chp ?? data.changePercent ?? data.change_percent ?? data.pct_change ?? null;
-          if (change === null && data.ch && data.price) {
-            // Calculate from absolute change if available
-            change = data.ch / (data.price - data.ch) * 100;
-          }
-          // Log response fields to help debug
-          console.log(`${s.symbol} gold-api response keys:`, Object.keys(data), 'sample:', JSON.stringify(data).substring(0, 200));
+          // gold-api.com free tier has no % change field — fetch yesterday to calculate
+          let change = 0;
+          try {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const dateStr = yesterday.toISOString().split('T')[0];
+            const histUrl = `https://api.gold-api.com/price/${s.goldapi}/${dateStr}`;
+            const histRes = await fetchWithTimeout(histUrl, 8000);
+            const histData = await histRes.json();
+            if (histData.price) {
+              const prevPrice = parseFloat(histData.price);
+              change = ((price - prevPrice) / prevPrice * 100);
+            }
+          } catch(e) {}
           return {
             symbol: s.symbol,
             price: price > 1000 ? price.toLocaleString('en-US', {maximumFractionDigits: 0}) : price.toFixed(2),
-            change: change !== null ? parseFloat(parseFloat(change).toFixed(2)) : 0
+            change: parseFloat(change.toFixed(2))
           };
         } else if (s.crypto) {
           // Use CoinGecko free API - no key, includes 24h change
